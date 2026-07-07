@@ -27,6 +27,31 @@ class RestaurantClosed(RestaurantException):
         super().__init__("Restaurant is closed", "RESTAURANT_CLOSED", 422)
 
 
+class CuisineType:
+    ITALIAN = "ITALIAN"
+    FRENCH = "FRENCH"
+    JAPANESE = "JAPANESE"
+    MEXICAN = "MEXICAN"
+    CHINESE = "CHINESE"
+    AMERICAN = "AMERICAN"
+    OTHER = "OTHER"
+
+
+class RestaurantStatus:
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+
+
+class DayOfWeek:
+    MONDAY = "MONDAY"
+    TUESDAY = "TUESDAY"
+    WEDNESDAY = "WEDNESDAY"
+    THURSDAY = "THURSDAY"
+    FRIDAY = "FRIDAY"
+    SATURDAY = "SATURDAY"
+    SUNDAY = "SUNDAY"
+
+
 @dataclass
 class GeoPoint:
     latitude: float
