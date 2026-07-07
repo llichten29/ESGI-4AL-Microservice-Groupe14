@@ -1,5 +1,5 @@
 from typing import Optional
-from domain.models import Restaurant
+from restaurant-service.domain.models import Restaurant
 
 
 class InMemoryRestaurantRepository:
