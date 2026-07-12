@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class RestaurantException(Exception):
@@ -111,8 +111,8 @@ class Restaurant:
     status: str = "ACTIVE"
     rating: float = 0.0
     menus: list[Menu] = field(default_factory=list)
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @property
     def is_open(self) -> bool:
@@ -120,7 +120,7 @@ class Restaurant:
             return False
         if not self.opening_hours:
             return True
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         day_name = now.strftime("%A").upper()
         if day_name not in self.opening_hours:
             return False

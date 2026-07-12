@@ -1,6 +1,6 @@
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from domain.models import (
@@ -32,7 +32,7 @@ class RestaurantService:
                 event_data=event.to_dict()
             )
         except Exception as e:
-            logger.error(f"Failed to publish event {event.event_type}: {e}")
+            logging.exception(f"Failed to publish event {event.event_type}: {e}")
 
     # ---- Restaurant CRUD ----
 
@@ -70,8 +70,8 @@ class RestaurantService:
             cuisine_type=data.get("cuisine_type", "OTHER"),
             opening_hours=opening_hours,
             status=data.get("status", "ACTIVE"),
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat()
+            created_at=datetime.now(timezone.utc).isoformat(),
+            updated_at=datetime.now(timezone.utc).isoformat()
         )
 
         self.repository.save(restaurant)
@@ -140,7 +140,7 @@ class RestaurantService:
                 opening_hours[oh_data["day"]] = hours
             restaurant.opening_hours = opening_hours
 
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(RestaurantUpdated(
@@ -163,7 +163,7 @@ class RestaurantService:
             is_active=data.get("is_active", True)
         )
         restaurant.menus.append(menu)
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -194,7 +194,7 @@ class RestaurantService:
         if "is_active" in data:
             menu.is_active = data["is_active"]
 
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -209,7 +209,7 @@ class RestaurantService:
         restaurant = self.get_restaurant(restaurant_id)
         menu = self.get_menu(restaurant_id, menu_id)
         restaurant.menus.remove(menu)
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -242,7 +242,7 @@ class RestaurantService:
         menu.items.append(item)
 
         restaurant = self.get_restaurant(restaurant_id)
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -283,7 +283,7 @@ class RestaurantService:
             ]
 
         restaurant = self.get_restaurant(restaurant_id)
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -308,7 +308,7 @@ class RestaurantService:
         menu.items.remove(item)
 
         restaurant = self.get_restaurant(restaurant_id)
-        restaurant.updated_at = datetime.utcnow().isoformat()
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(restaurant)
 
         self._publish(MenuUpdated(
@@ -389,4 +389,4 @@ class RestaurantService:
                 order_id=order_id
             ))
 
-        return {"orderId": order_id, "status": status, "updatedAt": datetime.utcnow().isoformat()}
+        return {"orderId": order_id, "status": status, "updatedAt": datetime.now(timezone.utc).isoformat()}

@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field, asdict
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
 class BaseEvent:
     event_id: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @property
     def event_type(self) -> str:
