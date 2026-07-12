@@ -72,7 +72,7 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except self.expected_exception as e:
+        except self.expected_exception:
             self._on_failure()
             raise
 
@@ -92,7 +92,7 @@ class CircuitBreaker:
     def _on_failure(self):
         self.failure_count += 1
         self.last_failure_time = time.time()
-        logger.error(
+        logging.exception(
             f"Circuit Breaker '{self.name}': failure {self.failure_count}/{self.failure_threshold}"
         )
         if self.failure_count >= self.failure_threshold:

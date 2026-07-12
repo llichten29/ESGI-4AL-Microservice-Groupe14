@@ -29,7 +29,7 @@ def setup_consumers(broker, service):
                 })
                 ch.basic_ack(delivery_tag=method.delivery_tag)
             except Exception as e:
-                logger.error(f"Failed to process OrderCreated: {e}")
+                logging.exception(f"Failed to process OrderCreated: {e}")
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
         broker.subscribe_event(queue, on_order_created)

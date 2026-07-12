@@ -1,7 +1,7 @@
 import uuid
 import logging
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from domain.models import (
@@ -30,7 +30,7 @@ class CustomerService:
                 event_data=event.to_dict()
             )
         except Exception as e:
-            logger.error(f"Failed to publish event {event.event_type}: {e}")
+            logging.exception(f"Failed to publish event {event.event_type}: {e}")
 
     def register(self, data: dict) -> tuple[Customer, str]:
         email = data.get("email", "").strip().lower()
@@ -64,8 +64,8 @@ class CustomerService:
             password_hash=generate_password_hash(password),
             phone=data.get("phone", ""),
             addresses=addresses,
-            created_at=datetime.utcnow().isoformat(),
-            updated_at=datetime.utcnow().isoformat()
+            created_at=datetime.now(timezone.utc).isoformat(),
+            updated_at=datetime.now(timezone.utc).isoformat()
         )
 
         self.repository.save(customer)
@@ -93,7 +93,7 @@ class CustomerService:
         payload = {
             "customer_id": customer.id,
             "email": customer.email,
-            "exp": datetime.utcnow() + timedelta(hours=24)
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24)
         }
         return jwt.encode(payload, self.jwt_secret, algorithm="HS256")
 
@@ -118,7 +118,7 @@ class CustomerService:
                     raise EmailAlreadyExists(new_email)
                 customer.email = new_email
 
-        customer.updated_at = datetime.utcnow().isoformat()
+        customer.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(customer)
         return customer
 
@@ -140,7 +140,7 @@ class CustomerService:
             address.is_default = True
 
         customer.addresses.append(address)
-        customer.updated_at = datetime.utcnow().isoformat()
+        customer.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(customer)
         return address
 
@@ -148,25 +148,31 @@ class CustomerService:
         customer = self.get_profile(customer_id)
         return customer.addresses
 
+    def _apply_address_fields(self, address: CustomerAddress, data: dict) -> None:
+        if "label" in data:
+            address.label = data["label"]
+        if "street" in data:
+            address.street = data["street"]
+        if "city" in data:
+            address.city = data["city"]
+        if "postal_code" in data:
+            address.postal_code = data["postal_code"]
+
+    def _set_address_as_default(self, address: CustomerAddress, customer: Customer) -> None:
+        for a in customer.addresses:
+            a.is_default = False
+        address.is_default = True
+
     def update_address(self, customer_id: str, address_id: str, data: dict) -> CustomerAddress:
         customer = self.get_profile(customer_id)
 
         for address in customer.addresses:
             if address.id == address_id:
-                if "label" in data:
-                    address.label = data["label"]
-                if "street" in data:
-                    address.street = data["street"]
-                if "city" in data:
-                    address.city = data["city"]
-                if "postal_code" in data:
-                    address.postal_code = data["postal_code"]
-                if "is_default" in data and data["is_default"]:
-                    for a in customer.addresses:
-                        a.is_default = False
-                    address.is_default = True
+                self._apply_address_fields(address, data)
+                if data.get("is_default"):
+                    self._set_address_as_default(address, customer)
 
-                customer.updated_at = datetime.utcnow().isoformat()
+                customer.updated_at = datetime.now(timezone.utc).isoformat()
                 self.repository.save(customer)
                 return address
 
@@ -180,7 +186,7 @@ class CustomerService:
                 customer.addresses.remove(address)
                 if address.is_default and customer.addresses:
                     customer.addresses[0].is_default = True
-                customer.updated_at = datetime.utcnow().isoformat()
+                customer.updated_at = datetime.now(timezone.utc).isoformat()
                 self.repository.save(customer)
                 return
 
@@ -199,5 +205,5 @@ class CustomerService:
             date=order_data.get("date", ""),
             restaurant_name=order_data.get("restaurant_name", "")
         ))
-        customer.updated_at = datetime.utcnow().isoformat()
+        customer.updated_at = datetime.now(timezone.utc).isoformat()
         self.repository.save(customer)

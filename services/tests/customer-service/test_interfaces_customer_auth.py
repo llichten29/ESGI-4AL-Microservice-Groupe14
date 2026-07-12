@@ -1,6 +1,6 @@
 import pytest
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class TestJWTAuth:
@@ -21,7 +21,7 @@ class TestJWTAuth:
 
     def test_get_profile_with_expired_token(self, customer_app, customer_client):
         expired = jwt.encode(
-            {"customer_id": "test", "email": "test@test.com", "exp": datetime.utcnow() - timedelta(hours=1)},
+            {"customer_id": "test", "email": "test@test.com", "exp": datetime.now(timezone.utc) - timedelta(hours=1)},
             customer_app.config.get('JWT_SECRET', 'test-secret'),
             algorithm="HS256"
         )
