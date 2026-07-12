@@ -183,6 +183,7 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:8006
       RATING_SERVICE_URL: http://rating-service:8007
       CUSTOMER_SERVICE_URL: http://customer-service:8008
+      DELIVERER_SERVICE_URL: http://deliverer-service:8009
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -365,6 +366,43 @@ services:
     networks:
       - meal-delivery-network
 
+  # ===== Deliverer Database =====
+  mongodb-deliverer:
+    image: mongo:7
+    container_name: meal-delivery-mongodb-deliverer
+    ports:
+      - "27020:27017"
+    environment:
+      MONGO_INITDB_DATABASE: deliverer_db
+    volumes:
+      - mongodb_deliverer_data:/data/db
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')" --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meal-delivery-network
+
+  deliverer-service:
+    build:
+      context: ./services
+      dockerfile: main/deliverer-service/Dockerfile
+    container_name: meal-delivery-deliverer-service
+    ports:
+      - "8009:8009"
+    environment:
+      SERVICE_PORT: 8009
+      RABBITMQ_HOST: rabbitmq
+      MONGODB_URL: mongodb://mongodb-deliverer:27017/deliverer_db
+    depends_on:
+      mongodb-deliverer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - meal-delivery-network
+
 volumes:
   postgres_order_data:
   postgres_restaurant_data:
@@ -374,6 +412,7 @@ volumes:
   mongodb_rating_data:
   elasticsearch_catalog_data:
   mongodb_customer_data:
+  mongodb_deliverer_data:
 
 networks:
   meal-delivery-network:
