@@ -1,0 +1,1619 @@
+openapi: 3.0.3
+
+info:
+  title: FoodDelivery Platform API
+  version: 1.0.0
+  description: |
+    API unifiée de la plateforme de livraison de repas, exposée à travers l'**API Gateway**.
+
+    Le gateway (port `8000`) est un reverse-proxy « catch-all » : il reçoit toutes les
+    requêtes et les transmet, **sans réécriture de chemin**, au microservice responsable.
+    Ce document décrit donc l'ensemble des routes telles qu'un client les appelle
+    depuis le gateway.
+
+    ### Microservices derrière le gateway
+    | Service               | Port | Domaine                                             |
+    |-----------------------|------|-----------------------------------------------------|
+    | order-service         | 8001 | Commandes et orchestration de la SAGA               |
+    | restaurant-service    | 8002 | Restaurants, menus, acceptation des commandes       |
+    | catalog-service       | 8003 | Recherche de restaurants et de plats (lecture)      |
+    | payment-service       | 8004 | Paiements et remboursements                         |
+    | delivery-service      | 8005 | Livraisons (suivi d'une course)                     |
+    | notification-service  | 8006 | Notifications                                       |
+    | rating-service        | 8007 | Notes et avis                                       |
+    | customer-service      | 8008 | Clients, authentification, adresses                 |
+    | deliverer-service     | 8009 | Livreurs et leur disponibilité                      |
+
+    L'authentification (JWT) n'est requise que sur les routes `customer-service`
+    marquées d'un cadenas. Les autres services communiquent en interne.
+  contact:
+    name: Équipe FoodDelivery
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: API Gateway (point d'entrée unique)
+
+tags:
+  - name: Gateway
+    description: Endpoints propres au gateway (agrégation, santé)
+  - name: Customers
+    description: Comptes clients, authentification et adresses (customer-service)
+  - name: Restaurants
+    description: Gestion des restaurants et de leurs menus (restaurant-service)
+  - name: Catalog
+    description: Recherche de restaurants et de plats (catalog-service)
+  - name: Orders
+    description: Cycle de vie des commandes et SAGA (order-service)
+  - name: Payments
+    description: Paiements et remboursements (payment-service)
+  - name: Deliveries
+    description: Suivi des livraisons (delivery-service)
+  - name: Deliverers
+    description: Livreurs et disponibilité (deliverer-service)
+  - name: Notifications
+    description: Notifications émises par la plateforme (notification-service)
+  - name: Ratings
+    description: Notes et avis clients/livreurs (rating-service)
+
+paths:
+
+  # ============================================================= GATEWAY
+  /health:
+    get:
+      tags: [Gateway]
+      summary: État de santé du gateway
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Le gateway répond
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+                  service: { type: string, example: api-gateway }
+
+  /orders/{order_id}/details:
+    get:
+      tags: [Gateway]
+      summary: Détails agrégés d'une commande
+      description: >
+        Route d'agrégation propre au gateway : récupère la commande auprès de
+        `order-service`, puis enrichit la réponse avec le nom et la localisation
+        du restaurant (`restaurant-service`).
+      operationId: getOrderDetails
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Commande enrichie
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Order'
+                  - type: object
+                    properties:
+                      restaurant_name: { type: string }
+                      restaurant_location: { type: string, nullable: true }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================= CUSTOMERS
+  /customers/register:
+    post:
+      tags: [Customers]
+      summary: Inscription d'un client
+      operationId: registerCustomer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerRegistration' }
+      responses:
+        '201':
+          description: Client créé, jeton JWT retourné
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer: { $ref: '#/components/schemas/Customer' }
+                  token: { type: string, description: Jeton JWT (valable 24 h) }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /customers/login:
+    post:
+      tags: [Customers]
+      summary: Connexion d'un client
+      operationId: loginCustomer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer: { $ref: '#/components/schemas/Customer' }
+                  token: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/profile:
+    get:
+      tags: [Customers]
+      summary: Profil du client connecté
+      operationId: getProfile
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Customers]
+      summary: Mise à jour du profil
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/addresses:
+    get:
+      tags: [Customers]
+      summary: Liste des adresses du client
+      operationId: listAddresses
+      responses:
+        '200':
+          description: Adresses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items: { $ref: '#/components/schemas/CustomerAddress' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Customers]
+      summary: Ajout d'une adresse
+      operationId: addAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressInput' }
+      responses:
+        '201':
+          description: Adresse créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerAddress' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/addresses/{address_id}:
+    put:
+      tags: [Customers]
+      summary: Mise à jour d'une adresse
+      operationId: updateAddress
+      parameters:
+        - $ref: '#/components/parameters/AddressId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressInput' }
+      responses:
+        '200':
+          description: Adresse mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerAddress' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Customers]
+      summary: Suppression d'une adresse
+      operationId: deleteAddress
+      parameters:
+        - $ref: '#/components/parameters/AddressId'
+      responses:
+        '204':
+          description: Adresse supprimée
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers/orders:
+    get:
+      tags: [Customers]
+      summary: Historique des commandes du client connecté
+      description: Références de commandes stockées côté customer-service (vue légère).
+      operationId: listCustomerOrderRefs
+      responses:
+        '200':
+          description: Références de commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/OrderRef' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================= CATALOG
+  /restaurants/search:
+    get:
+      tags: [Catalog]
+      summary: Recherche de restaurants
+      operationId: searchRestaurants
+      security: []
+      parameters:
+        - { name: query, in: query, schema: { type: string }, description: Terme de recherche (nom) }
+        - { name: cuisineType, in: query, schema: { type: string }, description: Type de cuisine }
+        - { name: isOpen, in: query, schema: { type: boolean }, description: Filtrer sur les restaurants ouverts }
+        - { name: minRating, in: query, schema: { type: number, format: float, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: Résultats de recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  restaurants:
+                    type: array
+                    items: { $ref: '#/components/schemas/CatalogEntry' }
+
+  /dishes/search:
+    get:
+      tags: [Catalog]
+      summary: Recherche de plats
+      operationId: searchDishes
+      security: []
+      parameters:
+        - { name: query, in: query, schema: { type: string } }
+        - { name: restaurantId, in: query, schema: { type: string } }
+        - { name: maxPrice, in: query, schema: { type: number, format: float } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: Plats trouvés
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dishes:
+                    type: array
+                    items: { $ref: '#/components/schemas/CatalogDish' }
+
+  # ============================================================= RESTAURANTS
+  /restaurants:
+    get:
+      tags: [Restaurants]
+      summary: Liste de tous les restaurants
+      operationId: listRestaurants
+      security: []
+      responses:
+        '200':
+          description: Restaurants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items: { $ref: '#/components/schemas/Restaurant' }
+    post:
+      tags: [Restaurants]
+      summary: Création d'un restaurant
+      operationId: createRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantInput' }
+      responses:
+        '201':
+          description: Restaurant créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /restaurants/{restaurant_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Restaurants]
+      summary: Détail d'un restaurant
+      operationId: getRestaurant
+      security: []
+      responses:
+        '200':
+          description: Restaurant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise à jour d'un restaurant
+      operationId: updateRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantInput' }
+      responses:
+        '200':
+          description: Restaurant mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Restaurants]
+      summary: Liste des menus d'un restaurant
+      operationId: listMenus
+      security: []
+      responses:
+        '200':
+          description: Menus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  menus:
+                    type: array
+                    items: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Restaurants]
+      summary: Ajout d'un menu
+      operationId: createMenu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuInput' }
+      responses:
+        '201':
+          description: Menu créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+
+  /restaurants/{restaurant_id}/menus/{menu_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+    get:
+      tags: [Restaurants]
+      summary: Détail d'un menu
+      operationId: getMenu
+      security: []
+      responses:
+        '200':
+          description: Menu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise à jour d'un menu
+      operationId: updateMenu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuInput' }
+      responses:
+        '200':
+          description: Menu mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+    delete:
+      tags: [Restaurants]
+      summary: Suppression d'un menu
+      operationId: deleteMenu
+      responses:
+        '204':
+          description: Menu supprimé
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus/{menu_id}/items:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+    post:
+      tags: [Restaurants]
+      summary: Ajout d'un article au menu
+      operationId: createMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuItemInput' }
+      responses:
+        '201':
+          description: Article créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+
+  /restaurants/{restaurant_id}/menus/{menu_id}/items/{item_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+      - $ref: '#/components/parameters/ItemId'
+    get:
+      tags: [Restaurants]
+      summary: Détail d'un article
+      operationId: getMenuItem
+      security: []
+      responses:
+        '200':
+          description: Article
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise à jour d'un article
+      operationId: updateMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuItemInput' }
+      responses:
+        '200':
+          description: Article mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+    delete:
+      tags: [Restaurants]
+      summary: Suppression d'un article
+      operationId: deleteMenuItem
+      responses:
+        '204':
+          description: Article supprimé
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/validate:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    post:
+      tags: [Restaurants]
+      summary: Validation d'une commande par le restaurant
+      description: Vérifie la disponibilité des articles et l'ouverture du restaurant (appelé par order-service durant la SAGA).
+      operationId: validateOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dishId: { type: string }
+                      quantity: { type: integer }
+                requestedDeliveryTime: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Résultat de validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isValid: { type: boolean }
+                  reason: { type: string, nullable: true }
+
+  /restaurants/{restaurant_id}/orders/{order_id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Restaurants]
+      summary: Acceptation d'une commande par le restaurant
+      operationId: acceptOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estimatedPrepTime: { type: integer, description: Temps de préparation estimé (minutes) }
+      responses:
+        '200':
+          description: Commande acceptée
+          content:
+            application/json:
+              schema: { type: object }
+
+  /restaurants/{restaurant_id}/orders/{order_id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Restaurants]
+      summary: Refus d'une commande par le restaurant
+      operationId: rejectOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, default: OTHER }
+      responses:
+        '200':
+          description: Commande refusée
+          content:
+            application/json:
+              schema: { type: object }
+
+  /restaurants/{restaurant_id}/orders/{order_id}/status:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Restaurants]
+      summary: Mise à jour du statut de préparation
+      operationId: updateOrderStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, example: PREPARING }
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema: { type: object }
+
+  # ============================================================= ORDERS
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Création d'une commande (démarre la SAGA)
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderInput' }
+      responses:
+        '201':
+          description: Commande créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /orders/{order_id}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders]
+      summary: Détail d'une commande
+      operationId: getOrder
+      responses:
+        '200':
+          description: Commande
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Orders]
+      summary: Annulation d'une commande
+      description: Autorisée uniquement tant que la commande est au statut CREATED ou PAID. Déclenche un remboursement si un paiement existe.
+      operationId: cancelOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, default: Cancelled by customer }
+      responses:
+        '200':
+          description: Commande annulée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers/{customer_id}/orders:
+    parameters:
+      - $ref: '#/components/parameters/CustomerId'
+    get:
+      tags: [Orders]
+      summary: Commandes d'un client
+      operationId: getCustomerOrders
+      responses:
+        '200':
+          description: Commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+
+  /orders/{order_id}/saga:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders]
+      summary: État et historique de la SAGA d'une commande
+      operationId: getOrderSaga
+      responses:
+        '200':
+          description: État de la SAGA
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  sagaState: { type: string }
+                  history:
+                    type: array
+                    items: { $ref: '#/components/schemas/SagaStep' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/circuit-breakers:
+    get:
+      tags: [Orders]
+      summary: État des circuit breakers de l'order-service
+      operationId: getCircuitBreakers
+      responses:
+        '200':
+          description: États des circuit breakers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  circuitBreakers:
+                    type: array
+                    items: { type: object }
+
+  # ============================================================= PAYMENTS
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Traitement d'un paiement
+      description: >
+        Simule une passerelle de paiement externe. Jetons de carte spéciaux :
+        `card_declined` (refus), `card_flaky` (2 échecs transitoires puis succès).
+        Montant plafonné à 500 EUR.
+      operationId: processPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentInput' }
+      responses:
+        '201':
+          description: Paiement traité
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '402':
+          description: Paiement refusé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          $ref: '#/components/responses/BadRequest'
+
+  /payments/{payment_id}:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    get:
+      tags: [Payments]
+      summary: Détail d'un paiement
+      operationId: getPayment
+      responses:
+        '200':
+          description: Paiement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{order_id}/payment:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Payments]
+      summary: Paiement associé à une commande
+      operationId: getPaymentByOrder
+      responses:
+        '200':
+          description: Paiement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/{payment_id}/refund:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    post:
+      tags: [Payments]
+      summary: Remboursement (total ou partiel)
+      operationId: refundPayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: { type: number, format: float, description: Montant à rembourser (0 = total restant) }
+                reason: { type: string }
+      responses:
+        '201':
+          description: Remboursement effectué
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================= DELIVERIES
+  /deliveries:
+    post:
+      tags: [Deliveries]
+      summary: Création d'une livraison / affectation d'un livreur
+      operationId: assignDelivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id]
+              properties:
+                order_id: { type: string }
+                customer_id: { type: string }
+                restaurant_id: { type: string }
+      responses:
+        '201':
+          description: Livraison créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /deliveries/{delivery_id}:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    get:
+      tags: [Deliveries]
+      summary: Détail d'une livraison
+      operationId: getDelivery
+      responses:
+        '200':
+          description: Livraison
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{order_id}/delivery:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Deliveries]
+      summary: Livraison associée à une commande
+      operationId: getDeliveryByOrder
+      responses:
+        '200':
+          description: Livraison
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliveries/{delivery_id}/location:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    patch:
+      tags: [Deliveries]
+      summary: Mise à jour de la position du livreur
+      operationId: updateDeliveryLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location]
+              properties:
+                location: { $ref: '#/components/schemas/GeoLocation' }
+      responses:
+        '200':
+          description: Position mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+
+  /deliveries/{delivery_id}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      tags: [Deliveries]
+      summary: Confirmation de la livraison
+      operationId: confirmDelivery
+      responses:
+        '200':
+          description: Livraison confirmée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+
+  /deliveries/{delivery_id}/fail:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      tags: [Deliveries]
+      summary: Échec de la livraison
+      operationId: failDelivery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Livraison marquée en échec
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+
+  # ============================================================= DELIVERERS
+  /deliverers:
+    get:
+      tags: [Deliverers]
+      summary: Liste des livreurs
+      operationId: listDeliverers
+      responses:
+        '200':
+          description: Livreurs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliverers:
+                    type: array
+                    items: { $ref: '#/components/schemas/Deliverer' }
+    post:
+      tags: [Deliverers]
+      summary: Enregistrement d'un livreur
+      operationId: registerDeliverer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                vehicle: { type: string, default: BIKE, enum: [BIKE, SCOOTER, CAR] }
+                location: { $ref: '#/components/schemas/GeoLocation' }
+      responses:
+        '201':
+          description: Livreur créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+
+  /deliverers/assign:
+    post:
+      tags: [Deliverers]
+      summary: Affectation du premier livreur disponible
+      operationId: assignAvailableDeliverer
+      responses:
+        '200':
+          description: Livreur affecté (ou null si aucun disponible)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliverer:
+                    oneOf:
+                      - $ref: '#/components/schemas/Deliverer'
+                      - type: 'null'
+
+  /deliverers/{deliverer_id}:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    get:
+      tags: [Deliverers]
+      summary: Détail d'un livreur
+      operationId: getDeliverer
+      responses:
+        '200':
+          description: Livreur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliverers/{deliverer_id}/availability:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    patch:
+      tags: [Deliverers]
+      summary: Mise à jour de la disponibilité
+      operationId: setDelivererAvailability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [AVAILABLE, BUSY, OFFLINE] }
+      responses:
+        '200':
+          description: Disponibilité mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+
+  /deliverers/{deliverer_id}/release:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    post:
+      tags: [Deliverers]
+      summary: Libération d'un livreur (redevient disponible)
+      operationId: releaseDeliverer
+      responses:
+        '200':
+          description: Livreur libéré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+
+  # ============================================================= NOTIFICATIONS
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Liste des notifications
+      operationId: listNotifications
+      parameters:
+        - { name: recipient_id, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items: { $ref: '#/components/schemas/Notification' }
+
+  /notifications/{notification_id}:
+    parameters:
+      - { name: notification_id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Notifications]
+      summary: Détail d'une notification
+      operationId: getNotification
+      responses:
+        '200':
+          description: Notification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================= RATINGS
+  /ratings:
+    post:
+      tags: [Ratings]
+      summary: Création d'une note
+      operationId: createRating
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id, score]
+              properties:
+                order_id: { type: string }
+                rater_id: { type: string }
+                rater_type: { type: string, default: CUSTOMER }
+                target_id: { type: string }
+                target_type: { type: string, default: RESTAURANT, enum: [RESTAURANT, DELIVERER] }
+                score: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string }
+      responses:
+        '201':
+          description: Note créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rating' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /ratings/{rating_id}:
+    parameters:
+      - { name: rating_id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Ratings]
+      summary: Détail d'une note
+      operationId: getRating
+      responses:
+        '200':
+          description: Note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rating' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ratings/target/{target_type}/{target_id}:
+    parameters:
+      - $ref: '#/components/parameters/TargetType'
+      - $ref: '#/components/parameters/TargetId'
+    get:
+      tags: [Ratings]
+      summary: Notes reçues par une cible
+      operationId: getTargetRatings
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ratings:
+                    type: array
+                    items: { $ref: '#/components/schemas/Rating' }
+
+  /ratings/target/{target_type}/{target_id}/summary:
+    parameters:
+      - $ref: '#/components/parameters/TargetType'
+      - $ref: '#/components/parameters/TargetId'
+    get:
+      tags: [Ratings]
+      summary: Synthèse des notes d'une cible
+      operationId: getTargetSummary
+      responses:
+        '200':
+          description: Synthèse
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RatingSummary' }
+
+# ================================================================= COMPONENTS
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Jeton JWT obtenu via `/customers/login` ou `/customers/register`.
+
+  parameters:
+    OrderId:
+      { name: order_id, in: path, required: true, schema: { type: string }, description: Identifiant de la commande }
+    RestaurantId:
+      { name: restaurant_id, in: path, required: true, schema: { type: string }, description: Identifiant du restaurant }
+    MenuId:
+      { name: menu_id, in: path, required: true, schema: { type: string } }
+    ItemId:
+      { name: item_id, in: path, required: true, schema: { type: string } }
+    CustomerId:
+      { name: customer_id, in: path, required: true, schema: { type: string } }
+    PaymentId:
+      { name: payment_id, in: path, required: true, schema: { type: string } }
+    DeliveryId:
+      { name: delivery_id, in: path, required: true, schema: { type: string } }
+    DelivererId:
+      { name: deliverer_id, in: path, required: true, schema: { type: string } }
+    AddressId:
+      { name: address_id, in: path, required: true, schema: { type: string } }
+    TargetType:
+      { name: target_type, in: path, required: true, schema: { type: string, enum: [restaurant, deliverer] } }
+    TargetId:
+      { name: target_id, in: path, required: true, schema: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Authentification requise ou invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: NOT_FOUND }
+            message: { type: string, example: Ressource introuvable }
+
+    # -------- Customers --------
+    CustomerRegistration:
+      type: object
+      required: [email, password]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 6 }
+        phone: { type: string }
+        address: { $ref: '#/components/schemas/AddressInput' }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        addresses:
+          type: array
+          items: { $ref: '#/components/schemas/CustomerAddress' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AddressInput:
+      type: object
+      properties:
+        label: { type: string }
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        is_default: { type: boolean }
+
+    CustomerAddress:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        is_default: { type: boolean }
+
+    OrderRef:
+      type: object
+      properties:
+        order_id: { type: string }
+        status: { type: string }
+        total: { type: number, format: float }
+        date: { type: string }
+        restaurant_name: { type: string }
+
+    # -------- Restaurants --------
+    GeoPoint:
+      type: object
+      properties:
+        latitude: { type: number, format: float }
+        longitude: { type: number, format: float }
+
+    RestaurantAddress:
+      type: object
+      properties:
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        coordinates: { $ref: '#/components/schemas/GeoPoint' }
+
+    OpeningHours:
+      type: object
+      properties:
+        day: { type: string, example: monday }
+        open_time: { type: string, example: "09:00" }
+        close_time: { type: string, example: "22:00" }
+
+    MenuOption:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        price: { type: number, format: float }
+        is_default: { type: boolean }
+
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        is_available: { type: boolean }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/MenuOption' }
+
+    MenuItemInput:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        is_available: { type: boolean, default: true }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/MenuOption' }
+
+    Menu:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        is_active: { type: boolean }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MenuItem' }
+
+    MenuInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        is_active: { type: boolean, default: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MenuItemInput' }
+
+    Restaurant:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { $ref: '#/components/schemas/RestaurantAddress' }
+        phone: { type: string }
+        cuisine_type: { type: string }
+        opening_hours:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningHours' }
+        is_open: { type: boolean }
+        status: { type: string, example: ACTIVE }
+        rating: { type: number, format: float }
+        menus:
+          type: array
+          items: { $ref: '#/components/schemas/Menu' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RestaurantInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        cuisine_type: { type: string, default: OTHER }
+        status: { type: string, default: ACTIVE }
+        address: { $ref: '#/components/schemas/RestaurantAddress' }
+        opening_hours:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningHours' }
+
+    # -------- Catalog --------
+    CatalogDish:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        price: { type: number, format: float }
+
+    CatalogEntry:
+      type: object
+      properties:
+        restaurantId: { type: string }
+        name: { type: string }
+        cuisineType: { type: string }
+        address: { type: string }
+        isOpen: { type: boolean }
+        rating: { type: number, format: float }
+        reviewCount: { type: integer }
+        dishes:
+          type: array
+          items: { $ref: '#/components/schemas/CatalogDish' }
+        indexedAt: { type: string, format: date-time }
+
+    # -------- Orders --------
+    OrderItemInput:
+      type: object
+      required: [dishId, quantity]
+      properties:
+        dishId: { type: string }
+        name: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number, format: float }
+
+    OrderInput:
+      type: object
+      required: [customerId, restaurantId, items]
+      properties:
+        customerId: { type: string }
+        restaurantId: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItemInput' }
+        deliveryAddress: { $ref: '#/components/schemas/AddressInput' }
+        payment:
+          type: object
+          description: Détails de paiement transmis à la SAGA (ex. card_token)
+          properties:
+            card_token: { type: string }
+
+    OrderItem:
+      type: object
+      properties:
+        dishId: { type: string }
+        name: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: number, format: float }
+        subtotal: { type: number, format: float }
+
+    SagaStep:
+      type: object
+      properties:
+        state: { type: string }
+        detail: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        customerId: { type: string }
+        restaurantId: { type: string }
+        restaurantName: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        deliveryFee: { type: number, format: float }
+        totalPrice: { type: number, format: float }
+        deliveryAddress: { type: object }
+        status:
+          type: string
+          enum: [CREATED, PAID, CONFIRMED, PREPARING, READY, ASSIGNED, DELIVERING, DELIVERED, CANCELLED]
+        sagaState: { type: string }
+        paymentId: { type: string, nullable: true }
+        deliveryId: { type: string, nullable: true }
+        cancellationReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    # -------- Payments --------
+    PaymentInput:
+      type: object
+      required: [order_id, amount]
+      properties:
+        order_id: { type: string }
+        customer_id: { type: string }
+        amount: { type: number, format: float, description: Montant en EUR (max 500) }
+        currency: { type: string, default: EUR }
+        payment_method: { type: string, default: CARD }
+        card_token: { type: string, description: "Jetons de test : card_declined, card_flaky" }
+
+    Refund:
+      type: object
+      properties:
+        id: { type: string }
+        amount: { type: number, format: float }
+        reason: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        customer_id: { type: string }
+        amount: { type: number, format: float }
+        currency: { type: string }
+        payment_method: { type: string }
+        status:
+          type: string
+          enum: [PROCESSING, COMPLETED, FAILED, REFUNDED]
+        transaction_id: { type: string, nullable: true }
+        failure_reason: { type: string, nullable: true }
+        refunds:
+          type: array
+          items: { $ref: '#/components/schemas/Refund' }
+        refunded_amount: { type: number, format: float }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+
+    # -------- Deliveries --------
+    GeoLocation:
+      type: object
+      properties:
+        latitude: { type: number, format: float }
+        longitude: { type: number, format: float }
+
+    Delivery:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        deliverer_id: { type: string, nullable: true }
+        deliverer_name: { type: string, nullable: true }
+        customer_id: { type: string }
+        restaurant_id: { type: string }
+        status:
+          type: string
+          enum: [PENDING, ASSIGNED, PICKED_UP, DELIVERED, FAILED]
+        location: { $ref: '#/components/schemas/GeoLocation' }
+        assigned_at: { type: string, format: date-time, nullable: true }
+        picked_up_at: { type: string, format: date-time, nullable: true }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    # -------- Deliverers --------
+    Deliverer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        vehicle: { type: string, enum: [BIKE, SCOOTER, CAR] }
+        status: { type: string, enum: [AVAILABLE, BUSY, OFFLINE] }
+        location: { $ref: '#/components/schemas/GeoLocation' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    # -------- Notifications --------
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        recipient_id: { type: string }
+        recipient_type: { type: string }
+        type: { type: string }
+        channel: { type: string }
+        message: { type: string }
+        payload: { type: object }
+        created_at: { type: string, format: date-time }
+
+    # -------- Ratings --------
+    Rating:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        rater_id: { type: string }
+        rater_type: { type: string }
+        target_id: { type: string }
+        target_type: { type: string }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        created_at: { type: string, format: date-time }
+
+    RatingSummary:
+      type: object
+      properties:
+        target_id: { type: string }
+        target_type: { type: string }
+        average_score: { type: number, format: float }
+        review_count: { type: integer }
+
+# JWT requis par défaut ; les routes publiques déclarent `security: []`.
+security:
+  - bearerAuth: []
