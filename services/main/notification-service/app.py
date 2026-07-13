@@ -1,10 +1,51 @@
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+import logging
+import threading
 from flask import Flask, jsonify
 from flask_cors import CORS
+
+from infrastructure.repositories import InMemoryNotificationRepository
+from application.notification_service import NotificationService
+from interfaces.http.routes import routes
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     CORS(app)
+
+    repo = InMemoryNotificationRepository()
+    service = NotificationService(repository=repo)
+    app.notification_service = service
+
+    if app.config.get('RABBITMQ_HOST'):
+        try:
+            from main.shared.message_broker import MessageBroker
+            from interfaces.events.handlers import setup_consumers
+            consumer_broker = MessageBroker(
+                host=app.config['RABBITMQ_HOST'],
+                port=app.config['RABBITMQ_PORT'],
+                user=app.config['RABBITMQ_USER'],
+                password=app.config['RABBITMQ_PASSWORD']
+            )
+            consumer_broker.connect()
+            setup_consumers(consumer_broker, service)
+            threading.Thread(
+                target=consumer_broker.start_consuming,
+                daemon=True,
+                name="notification-event-consumer"
+            ).start()
+            logger.info("Notification consumers started")
+        except Exception as e:
+            logger.warning(f"Message broker unavailable, running without events: {e}")
+
+    app.register_blueprint(routes)
 
     @app.route('/health', methods=['GET'])
     def health():
@@ -19,6 +60,7 @@ def create_app():
         return jsonify({"error": "Internal server error"}), 500
 
     return app
+
 
 if __name__ == '__main__':
     app = create_app()
