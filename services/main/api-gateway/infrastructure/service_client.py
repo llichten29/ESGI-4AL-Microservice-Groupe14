@@ -16,13 +16,16 @@ class ServiceClient:
     def request(
         self,
         method: str,
-        path: str,
+        url_or_path: str,
         headers: Optional[dict] = None,
         json: Optional[dict] = None,
         params: Optional[dict] = None,
         timeout: Optional[float] = None
     ) -> tuple:
-        url = f"{self._base_url}/{path.lstrip('/')}"
+        if self._base_url:
+            url = f"{self._base_url}/{url_or_path.lstrip('/')}"
+        else:
+            url = url_or_path
         request_headers = {'Content-Type': 'application/json'}
         if headers:
             for key in ('authorization', 'content-type', 'x-user-id', 'x-correlation-id'):
