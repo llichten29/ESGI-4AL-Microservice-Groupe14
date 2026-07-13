@@ -390,3 +390,14 @@ class RestaurantService:
             ))
 
         return {"orderId": order_id, "status": status, "updatedAt": datetime.now(timezone.utc).isoformat()}
+
+    def on_rating_created(self, event: dict):
+        if event.get("entity_type") != "RESTAURANT":
+            return
+        restaurant = self.repository.find_by_id(event.get("entity_id", ""))
+        if not restaurant:
+            return
+        restaurant.rating = float(event.get("average_score", 0.0))
+        restaurant.updated_at = datetime.now(timezone.utc).isoformat()
+        self.repository.save(restaurant)
+        logger.info(f"Updated rating {restaurant.rating} for restaurant {restaurant.id}")
