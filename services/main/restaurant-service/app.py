@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
-    CORS(app)
+    CORS(app, resources={r"/*": {"origins": ["http://localhost:8000"]}})
 
     repo = InMemoryRestaurantRepository()
 

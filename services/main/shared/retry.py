@@ -22,16 +22,16 @@ def retry_with_backoff(
             for attempt in range(max_retries + 1):
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
+                except exceptions:
                     if attempt >= max_retries:
-                        logger.error(
-                            f"'{func_name}' failed after {max_retries} retries: {e}"
+                        logger.exception(
+                            "'%s' failed after %d retries", func_name, max_retries
                         )
                         raise
                     delay = base_delay * (multiplier ** attempt)
                     logger.warning(
-                        f"'{func_name}' attempt {attempt + 1}/{max_retries + 1} failed: {e}. "
-                        f"Retrying in {delay:.1f}s"
+                        "'%s' attempt %d/%d failed, retrying in %.1fs",
+                        func_name, attempt + 1, max_retries + 1, delay
                     )
                     sleep(delay)
         return wrapper

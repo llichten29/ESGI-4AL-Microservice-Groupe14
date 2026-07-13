@@ -23,7 +23,7 @@ class RatingService:
         try:
             self.broker.publish_event(
                 exchange=self.exchange,
-                routing_key=event.routing_key,
+                routing_key=event.get_routing_key(),
                 event_data=event.to_dict()
             )
         except Exception as e:
@@ -77,7 +77,6 @@ class RatingService:
         return self.repository.find_by_target(target_id, target_type)
 
     def get_summary(self, target_id: str, target_type: str) -> RatingSummary:
-        ratings = self.repository.find_by_target(target_id, target_type)
         average_score, review_count = self._recompute_summary(target_id, target_type)
         return RatingSummary(
             target_id=target_id,

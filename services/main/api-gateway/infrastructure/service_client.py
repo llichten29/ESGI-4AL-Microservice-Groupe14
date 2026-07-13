@@ -13,6 +13,18 @@ class ServiceClient:
         self._timeout = timeout
         self._session = requests.Session()
 
+    @staticmethod
+    def _build_request_headers(headers: Optional[dict]) -> dict:
+        request_headers = {'Content-Type': 'application/json'}
+        if not headers:
+            return request_headers
+        for key in ('authorization', 'content-type', 'x-user-id', 'x-correlation-id'):
+            if key in headers or key.title() in headers:
+                val = headers.get(key) or headers.get(key.title())
+                if val:
+                    request_headers[key.title()] = val
+        return request_headers
+
     def request(
         self,
         method: str,
@@ -26,13 +38,7 @@ class ServiceClient:
             url = f"{self._base_url}/{url_or_path.lstrip('/')}"
         else:
             url = url_or_path
-        request_headers = {'Content-Type': 'application/json'}
-        if headers:
-            for key in ('authorization', 'content-type', 'x-user-id', 'x-correlation-id'):
-                if key in headers or key.title() in headers:
-                    val = headers.get(key) or headers.get(key.title())
-                    if val:
-                        request_headers[key.title()] = val
+        request_headers = self._build_request_headers(headers)
 
         try:
             response = self._session.request(
@@ -46,11 +52,11 @@ class ServiceClient:
             content = response.json() if response.text else {}
             return content, response.status_code
         except requests.Timeout:
-            logger.error(f"Timeout calling {method} {url}")
+            logger.exception("Timeout calling %s %s", method, url)
             return {"error": "Service timeout"}, 504
         except requests.ConnectionError:
-            logger.error(f"Connection error calling {method} {url}")
+            logger.exception("Connection error calling %s %s", method, url)
             return {"error": "Service unavailable"}, 503
-        except Exception as e:
-            logger.error(f"Error calling {method} {url}: {e}")
+        except Exception:
+            logger.exception("Error calling %s %s", method, url)
             return {"error": "Internal gateway error"}, 502

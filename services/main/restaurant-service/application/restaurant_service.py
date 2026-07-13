@@ -319,7 +319,7 @@ class RestaurantService:
 
     # ---- Order Management ----
 
-    def validate_items(self, restaurant_id: str, items: list[dict], requested_delivery_time: Optional[str] = None) -> dict:
+    def validate_items(self, restaurant_id: str, items: list[dict], _requested_delivery_time: Optional[str] = None) -> dict:
         restaurant = self.get_restaurant(restaurant_id)
 
         if not restaurant.is_open:

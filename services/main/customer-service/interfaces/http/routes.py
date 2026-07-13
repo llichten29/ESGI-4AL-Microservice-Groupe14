@@ -3,6 +3,8 @@ from flask import Blueprint, request, jsonify, g, current_app
 from domain.models import CustomerException
 from .auth import jwt_required
 
+MSG_BODY_REQUIRED = "Request body required"
+
 routes = Blueprint('customer', __name__, url_prefix='')
 
 
@@ -52,7 +54,7 @@ def register():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         customer, token = _service().register(data)
         return jsonify({"customer": _serialize_customer(customer), "token": token}), 201
     except CustomerException as e:
@@ -64,7 +66,7 @@ def login():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         customer, token = _service().login(
             data.get("email", ""),
             data.get("password", "")
@@ -90,7 +92,7 @@ def update_profile():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         customer = _service().update_profile(g.current_user, data)
         return jsonify(_serialize_customer(customer))
     except CustomerException as e:
@@ -113,7 +115,7 @@ def add_address():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         address = _service().add_address(g.current_user, data)
         return jsonify(_serialize_address(address)), 201
     except CustomerException as e:
@@ -126,7 +128,7 @@ def update_address(address_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         address = _service().update_address(g.current_user, address_id, data)
         return jsonify(_serialize_address(address))
     except CustomerException as e:

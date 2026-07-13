@@ -3,5 +3,5 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def setup_consumers(broker):
+def setup_consumers():
     logger.info("Rating service has no incoming event consumers")

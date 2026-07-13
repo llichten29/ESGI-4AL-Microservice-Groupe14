@@ -14,8 +14,7 @@ class BaseEvent:
     def event_type(self) -> str:
         return self.__class__.__name__
 
-    @property
-    def routing_key(self) -> str:
+    def get_routing_key(self) -> str:
         return self.ROUTING_KEY or self.event_type
 
     def to_dict(self) -> dict:

@@ -74,32 +74,36 @@ def _load_routing_table(openapi_path: str, app: Flask) -> RoutingTable:
     for path, path_item in paths.items():
         if path in GATEWAY_HANDLED_PATHS:
             continue
-        for method in ('get', 'post', 'put', 'patch', 'delete'):
-            operation = path_item.get(method)
-            if not operation:
-                continue
-            tags = operation.get('tags', [])
-            if not tags:
-                continue
-            config_key = TAG_SERVICE_MAP.get(tags[0])
-            if not config_key:
-                continue
-            service_url = app.config.get(config_key)
-            if not service_url:
-                logger.warning("No URL configured for %s (%s)", tags[0], config_key)
-                continue
-
-            path_pattern = re.sub(r'\{(\w+)\}', r'<\1>', path)
-            rule = RouteRule(
-                path_pattern=path_pattern,
-                method=method.upper(),
-                service_url=service_url,
-                timeout=10.0,
-            )
-            table.add_rule(rule)
+        _add_path_operations(path, path_item, app, table)
 
     logger.info("Routing table loaded with %d rule(s) from OpenAPI spec", len(table._rules))
     return table
+
+
+def _add_path_operations(path: str, path_item: dict, app: Flask, table: RoutingTable):
+    for method in ('get', 'post', 'put', 'patch', 'delete'):
+        operation = path_item.get(method)
+        if not operation:
+            continue
+        tags = operation.get('tags', [])
+        if not tags:
+            continue
+        config_key = TAG_SERVICE_MAP.get(tags[0])
+        if not config_key:
+            continue
+        service_url = app.config.get(config_key)
+        if not service_url:
+            logger.warning("No URL configured for %s (%s)", tags[0], config_key)
+            continue
+
+        path_pattern = re.sub(r'\{(\w+)\}', r'<\1>', path)
+        rule = RouteRule(
+            path_pattern=path_pattern,
+            method=method.upper(),
+            service_url=service_url,
+            timeout=10.0,
+        )
+        table.add_rule(rule)
 
 
 def _build_service_urls(app: Flask) -> dict:
@@ -154,19 +158,19 @@ def create_app():
     def server_error(error):
         return jsonify({"error": "Internal server error"}), 500
 
-    _start_event_consumers(app, gateway_service)
+    _start_event_consumers(app)
 
     return app
 
 
-def _start_event_consumers(app: Flask, gateway_service: GatewayService):
+def _start_event_consumers(app: Flask):
     try:
         broker = MessageBroker(
             host=app.config.get('RABBITMQ_HOST', 'rabbitmq'),
             port=app.config.get('RABBITMQ_PORT', 5672),
         )
         broker.connect()
-        setup_consumers(broker, gateway_service)
+        setup_consumers(broker)
         thread = threading.Thread(target=broker.start_consuming, daemon=True)
         thread.start()
         logger.info("Event consumers started")

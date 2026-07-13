@@ -39,7 +39,7 @@ class OrderService:
         try:
             self.broker.publish_event(
                 exchange=self.exchange,
-                routing_key=event.routing_key,
+                routing_key=event.get_routing_key(),
                 event_data=event.to_dict()
             )
         except Exception as e:

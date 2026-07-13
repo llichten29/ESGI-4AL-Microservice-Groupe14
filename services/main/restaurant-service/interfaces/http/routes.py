@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, current_app
 
 from domain.models import RestaurantException
 
+MSG_BODY_REQUIRED = "Request body required"
+
 routes = Blueprint('restaurant', __name__, url_prefix='')
 
 
@@ -74,7 +76,7 @@ def create_restaurant():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         restaurant = _service().create_restaurant(data)
         return jsonify(_serialize_restaurant(restaurant)), 201
     except RestaurantException as e:
@@ -101,7 +103,7 @@ def update_restaurant(restaurant_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         restaurant = _service().update_restaurant(restaurant_id, data)
         return jsonify(_serialize_restaurant(restaurant))
     except RestaurantException as e:
@@ -124,7 +126,7 @@ def create_menu(restaurant_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         menu = _service().add_menu(restaurant_id, data)
         return jsonify(_serialize_menu(menu)), 201
     except RestaurantException as e:
@@ -145,7 +147,7 @@ def update_menu(restaurant_id, menu_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         menu = _service().update_menu(restaurant_id, menu_id, data)
         return jsonify(_serialize_menu(menu))
     except RestaurantException as e:
@@ -168,7 +170,7 @@ def create_menu_item(restaurant_id, menu_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         item = _service().add_menu_item(restaurant_id, menu_id, data)
         return jsonify(_serialize_menu_item(item)), 201
     except RestaurantException as e:
@@ -192,7 +194,7 @@ def update_menu_item(restaurant_id, menu_id, item_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         item = _service().update_menu_item(restaurant_id, menu_id, item_id, data)
         return jsonify(_serialize_menu_item(item))
     except RestaurantException as e:
@@ -215,7 +217,7 @@ def validate_order(restaurant_id):
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"error": {"code": "INVALID_INPUT", "message": "Request body required"}}), 400
+            return jsonify({"error": {"code": "INVALID_INPUT", "message": MSG_BODY_REQUIRED}}), 400
         result = _service().validate_items(
             restaurant_id,
             data.get("items", []),

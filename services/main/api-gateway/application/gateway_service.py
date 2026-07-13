@@ -42,7 +42,7 @@ class GatewayService:
             )
             return response_data, status_code
         except Exception as e:
-            logger.error(f"Error forwarding request to {url}: {e}")
+            logger.exception("Error forwarding request to %s", url)
             return {"error": "Service unavailable", "detail": str(e)}, 503
 
     def aggregate_order_details(self, order_id: str, headers: dict) -> tuple:
