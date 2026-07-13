@@ -167,8 +167,8 @@ services:
   # ===== Microservices =====
   api-gateway:
     build:
-      context: services/main/api-gateway
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/api-gateway/Dockerfile
     container_name: meal-delivery-api-gateway
     ports:
       - "8000:8000"
