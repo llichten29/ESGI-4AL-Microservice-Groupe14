@@ -184,6 +184,8 @@ services:
       RATING_SERVICE_URL: http://rating-service:8007
       CUSTOMER_SERVICE_URL: http://customer-service:8008
       DELIVERER_SERVICE_URL: http://deliverer-service:8009
+    volumes:
+      - ./documentation/openapi.yaml:/documentation/openapi.yaml:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -192,8 +194,8 @@ services:
 
   order-service:
     build:
-      context: services/main/order-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/order-service/Dockerfile
     container_name: meal-delivery-order-service
     ports:
       - "8001:8001"
@@ -233,8 +235,8 @@ services:
 
   catalog-service:
     build:
-      context: services/main/catalog-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/catalog-service/Dockerfile
     container_name: meal-delivery-catalog-service
     ports:
       - "8003:8003"
@@ -254,8 +256,8 @@ services:
 
   payment-service:
     build:
-      context: services/main/payment-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/payment-service/Dockerfile
     container_name: meal-delivery-payment-service
     ports:
       - "8004:8004"
@@ -273,8 +275,8 @@ services:
 
   delivery-service:
     build:
-      context: services/main/delivery-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/delivery-service/Dockerfile
     container_name: meal-delivery-delivery-service
     ports:
       - "8005:8005"
@@ -292,8 +294,8 @@ services:
 
   notification-service:
     build:
-      context: services/main/notification-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/notification-service/Dockerfile
     container_name: meal-delivery-notification-service
     ports:
       - "8006:8006"
@@ -311,8 +313,8 @@ services:
 
   rating-service:
     build:
-      context: services/main/rating-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: main/rating-service/Dockerfile
     container_name: meal-delivery-rating-service
     ports:
       - "8007:8007"
