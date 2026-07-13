@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
 import logging
+import threading
 from flask import Flask, jsonify
 from flask_cors import CORS
 
@@ -47,8 +48,21 @@ def create_app():
 
     if broker:
         try:
+            from main.shared.message_broker import MessageBroker
             from interfaces.events.handlers import setup_consumers
-            setup_consumers(broker, service)
+            consumer_broker = MessageBroker(
+                host=app.config['RABBITMQ_HOST'],
+                port=app.config['RABBITMQ_PORT'],
+                user=app.config['RABBITMQ_USER'],
+                password=app.config['RABBITMQ_PASSWORD']
+            )
+            consumer_broker.connect()
+            setup_consumers(consumer_broker, service)
+            threading.Thread(
+                target=consumer_broker.start_consuming,
+                daemon=True,
+                name="customer-event-consumer"
+            ).start()
         except Exception as e:
             logger.warning(f"Could not start event consumers: {e}")
 
