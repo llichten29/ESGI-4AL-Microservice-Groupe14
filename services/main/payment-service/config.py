@@ -1,8 +1,12 @@
 import os
 
+
 class Config:
     DEBUG = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
-    RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
-    RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', '5672'))
     SERVICE_PORT = int(os.getenv('SERVICE_PORT', '8004'))
+    RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
+    RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', '5672'))
+    RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
+    RABBITMQ_PASSWORD = os.getenv('RABBITMQ_PASSWORD', 'guest')
+    RABBITMQ_EXCHANGE = os.getenv('RABBITMQ_EXCHANGE', 'payment.events')
