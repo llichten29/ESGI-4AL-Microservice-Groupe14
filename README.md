@@ -6,16 +6,16 @@ Plateforme de livraison de repas (type Uber Eats / Deliveroo) -- Preuve de conce
 
 8 microservices autonomes, chacun avec sa propre base de donnees en memoire, orchestrant un pattern SAGA pour le traitement des commandes.
 
-| Service | Port | Role |
-|---|---|---|
-| api-gateway | 8000 | Point d'entree unique, routage des requetes |
-| order-service | 8001 | Orchestrateur SAGA, cycle de vie des commandes, Circuit Breaker |
-| restaurant-service | 8002 | Gestion des restaurants, menus, validation et acceptation |
-| catalog-service | 8003 | Recherche et indexation des restaurants/plats |
-| payment-service | 8004 | Traitement des paiements avec retry et backoff exponentiel |
-| delivery-service | 8005 | Allocation des livreurs, suivi de livraison |
-| notification-service | 8006 | Notifications multi-canaux (email, SMS, push simules) |
-| rating-service | 8007 | Evaluations et avis clients |
+| Service              | Port | Role                                                            |
+| -------------------- | ---- | --------------------------------------------------------------- |
+| api-gateway          | 8000 | Point d'entree unique, routage des requetes                     |
+| order-service        | 8001 | Orchestrateur SAGA, cycle de vie des commandes, Circuit Breaker |
+| restaurant-service   | 8002 | Gestion des restaurants, menus, validation et acceptation       |
+| catalog-service      | 8003 | Recherche et indexation des restaurants/plats                   |
+| payment-service      | 8004 | Traitement des paiements avec retry et backoff exponentiel      |
+| delivery-service     | 8005 | Allocation des livreurs, suivi de livraison                     |
+| notification-service | 8006 | Notifications multi-canaux (email, SMS, push simules)           |
+| rating-service       | 8007 | Evaluations et avis clients                                     |
 
 ## Stack technique
 
