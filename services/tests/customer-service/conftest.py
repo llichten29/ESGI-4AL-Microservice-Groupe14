@@ -14,7 +14,7 @@ _other_bases = [
 for p in _other_bases:
     sys.path.remove(p)
 
-_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces']
+_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces', 'app', 'config']
 for mod in list(sys.modules.keys()):
     parts = mod.split('.')
     if any(c in mod for c in ['restaurant', 'order', 'delivery']):

@@ -114,6 +114,13 @@ Interface web disponible sur http://localhost:15672 (guest/guest).
 python -m pytest services/tests
 ```
 
+Avec mesure de couverture et verification du seuil de 80 % par service :
+
+```bash
+python -m pytest services/tests -p no:xdist --cov=services/main --cov-report=xml:coverage.xml
+python services/tests/check_coverage.py
+```
+
 ### Arreter l'infrastructure
 
 ```bash

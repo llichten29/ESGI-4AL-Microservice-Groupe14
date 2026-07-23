@@ -2,7 +2,7 @@ import sys
 import os
 
 _services_base = os.path.join(os.path.dirname(__file__), '..', 'main')
-_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces']
+_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces', 'app', 'config']
 _service_dirs = sorted(
     d for d in os.listdir(_services_base)
     if os.path.isdir(os.path.join(_services_base, d)) and d != 'shared'
@@ -38,3 +38,25 @@ def pytest_runtest_setup(item):
 @pytest.fixture
 def mock_broker():
     return MagicMock()
+
+
+@pytest.fixture
+def build_app(monkeypatch):
+    import importlib
+
+    def _build(rabbitmq_host='', broker_cls=None, mongo=False, env=None):
+        if mongo:
+            import mongomock
+            import pymongo
+            monkeypatch.setattr(pymongo, 'MongoClient', mongomock.MongoClient)
+        for key, value in (env or {}).items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv('RABBITMQ_HOST', rabbitmq_host)
+        if broker_cls is not None:
+            import main.shared.message_broker as message_broker_module
+            monkeypatch.setattr(message_broker_module, 'MessageBroker', broker_cls)
+        for mod in ('app', 'config'):
+            sys.modules.pop(mod, None)
+        return importlib.import_module('app').create_app()
+
+    return _build

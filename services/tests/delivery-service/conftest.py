@@ -4,7 +4,7 @@ import os
 import pytest
 
 _delivery_base = os.path.join(os.path.dirname(__file__), '..', '..', 'main', 'delivery-service')
-_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces']
+_conflicting_modules = ['domain', 'application', 'infrastructure', 'interfaces', 'app', 'config']
 for mod in list(sys.modules.keys()):
     parts = mod.split('.')
     if parts[0] in _conflicting_modules:
