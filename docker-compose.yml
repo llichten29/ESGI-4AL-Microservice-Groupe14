@@ -1,423 +1,420 @@
 version: '3.9'
 
 services:
-  # ===== Message Broker =====
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: meal-delivery-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    healthcheck:
-      test: rabbitmq-diagnostics ping
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    # ===== Message Broker =====
+    rabbitmq:
+        image: rabbitmq:3.12-management
+        container_name: meal-delivery-rabbitmq
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+        healthcheck:
+            test: rabbitmq-diagnostics ping
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  # ===== Cache =====
-  redis:
-    image: redis:7-alpine
-    container_name: meal-delivery-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: redis-cli ping
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    # ===== Cache =====
+    redis:
+        image: redis:7-alpine
+        container_name: meal-delivery-redis
+        ports:
+            - "6379:6379"
+        healthcheck:
+            test: redis-cli ping
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  # ===== Bases de donnees =====
-  postgres-order:
-    image: postgres:15-alpine
-    container_name: meal-delivery-postgres-order
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: order_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_order_data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres -d order_db
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    # ===== Bases de donnees =====
+    postgres-order:
+        image: postgres:15-alpine
+        container_name: meal-delivery-postgres-order
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: order_db
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - postgres_order_data:/var/lib/postgresql/data
+        healthcheck:
+            test: pg_isready -U postgres -d order_db
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  postgres-restaurant:
-    image: postgres:15-alpine
-    container_name: meal-delivery-postgres-restaurant
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_DB: restaurant_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_restaurant_data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres -d restaurant_db
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    postgres-restaurant:
+        image: postgres:15-alpine
+        container_name: meal-delivery-postgres-restaurant
+        ports:
+            - "5433:5432"
+        environment:
+            POSTGRES_DB: restaurant_db
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - postgres_restaurant_data:/var/lib/postgresql/data
+        healthcheck:
+            test: pg_isready -U postgres -d restaurant_db
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  postgres-payment:
-    image: postgres:15-alpine
-    container_name: meal-delivery-postgres-payment
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_DB: payment_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_payment_data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres -d payment_db
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    postgres-payment:
+        image: postgres:15-alpine
+        container_name: meal-delivery-postgres-payment
+        ports:
+            - "5434:5432"
+        environment:
+            POSTGRES_DB: payment_db
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - postgres_payment_data:/var/lib/postgresql/data
+        healthcheck:
+            test: pg_isready -U postgres -d payment_db
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  postgres-notification:
-    image: postgres:15-alpine
-    container_name: meal-delivery-postgres-notification
-    ports:
-      - "5435:5432"
-    environment:
-      POSTGRES_DB: notification_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_notification_data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres -d notification_db
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    postgres-notification:
+        image: postgres:15-alpine
+        container_name: meal-delivery-postgres-notification
+        ports:
+            - "5435:5432"
+        environment:
+            POSTGRES_DB: notification_db
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - postgres_notification_data:/var/lib/postgresql/data
+        healthcheck:
+            test: pg_isready -U postgres -d notification_db
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  mongodb-delivery:
-    image: mongo:7
-    container_name: meal-delivery-mongodb-delivery
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: delivery_db
-    volumes:
-      - mongodb_delivery_data:/data/db
-    healthcheck:
-      test: mongosh --eval "db.adminCommand('ping')" --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    mongodb-delivery:
+        image: mongo:7
+        container_name: meal-delivery-mongodb-delivery
+        ports:
+            - "27017:27017"
+        environment:
+            MONGO_INITDB_DATABASE: delivery_db
+        volumes:
+            - mongodb_delivery_data:/data/db
+        healthcheck:
+            test: mongosh --eval "db.adminCommand('ping')" --quiet
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  mongodb-rating:
-    image: mongo:7
-    container_name: meal-delivery-mongodb-rating
-    ports:
-      - "27018:27017"
-    environment:
-      MONGO_INITDB_DATABASE: rating_db
-    volumes:
-      - mongodb_rating_data:/data/db
-    healthcheck:
-      test: mongosh --eval "db.adminCommand('ping')" --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    mongodb-rating:
+        image: mongo:7
+        container_name: meal-delivery-mongodb-rating
+        ports:
+            - "27018:27017"
+        environment:
+            MONGO_INITDB_DATABASE: rating_db
+        volumes:
+            - mongodb_rating_data:/data/db
+        healthcheck:
+            test: mongosh --eval "db.adminCommand('ping')" --quiet
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  elasticsearch-catalog:
-    image: elasticsearch:8.11.0
-    container_name: meal-delivery-elasticsearch-catalog
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: false
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-    volumes:
-      - elasticsearch_catalog_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green\|yellow"'
-      interval: 10s
-      timeout: 10s
-      retries: 10
-    networks:
-      - meal-delivery-network
+    elasticsearch-catalog:
+        image: elasticsearch:8.11.0
+        container_name: meal-delivery-elasticsearch-catalog
+        ports:
+            - "9200:9200"
+            - "9300:9300"
+        environment:
+            discovery.type: single-node
+            xpack.security.enabled: false
+            ES_JAVA_OPTS: -Xms512m -Xmx512m
+        volumes:
+            - elasticsearch_catalog_data:/usr/share/elasticsearch/data
+        healthcheck:
+            test: curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green\|yellow"'
+            interval: 10s
+            timeout: 10s
+            retries: 10
+        networks:
+            - meal-delivery-network
 
-  # ===== Microservices =====
-  api-gateway:
-    build:
-      context: ./services
-      dockerfile: main/api-gateway/Dockerfile
-    container_name: meal-delivery-api-gateway
-    ports:
-      - "8000:8000"
-    environment:
-      SERVICE_PORT: 8000
-      RABBITMQ_HOST: rabbitmq
-      ORDER_SERVICE_URL: http://order-service:8001
-      RESTAURANT_SERVICE_URL: http://restaurant-service:8002
-      CATALOG_SERVICE_URL: http://catalog-service:8003
-      PAYMENT_SERVICE_URL: http://payment-service:8004
-      DELIVERY_SERVICE_URL: http://delivery-service:8005
-      NOTIFICATION_SERVICE_URL: http://notification-service:8006
-      RATING_SERVICE_URL: http://rating-service:8007
-      CUSTOMER_SERVICE_URL: http://customer-service:8008
-      DELIVERER_SERVICE_URL: http://deliverer-service:8009
-      OPENAPI_SPEC_PATH: /documentation/openapi.yaml
-    volumes:
-      - ./documentation/openapi.yaml:/documentation/openapi.yaml:ro
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    # ===== Microservices =====
+    api-gateway:
+        build:
+            context: ./services
+            dockerfile: main/api-gateway/Dockerfile
+        container_name: meal-delivery-api-gateway
+        ports:
+            - "8000:8000"
+        environment:
+            SERVICE_PORT: 8000
+            RABBITMQ_HOST: rabbitmq
+            ORDER_SERVICE_URL: http://order-service:8001
+            RESTAURANT_SERVICE_URL: http://restaurant-service:8002
+            CATALOG_SERVICE_URL: http://catalog-service:8003
+            PAYMENT_SERVICE_URL: http://payment-service:8004
+            DELIVERY_SERVICE_URL: http://delivery-service:8005
+            NOTIFICATION_SERVICE_URL: http://notification-service:8006
+            RATING_SERVICE_URL: http://rating-service:8007
+            CUSTOMER_SERVICE_URL: http://customer-service:8008
+            DELIVERER_SERVICE_URL: http://deliverer-service:8009
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  order-service:
-    build:
-      context: ./services
-      dockerfile: main/order-service/Dockerfile
-    container_name: meal-delivery-order-service
-    ports:
-      - "8001:8001"
-    environment:
-      SERVICE_PORT: 8001
-      RABBITMQ_HOST: rabbitmq
-      DATABASE_URL: postgresql://postgres:postgres@postgres-order:5432/order_db
-      RESTAURANT_SERVICE_URL: http://restaurant-service:8002
-      PAYMENT_SERVICE_URL: http://payment-service:8004
-      DELIVERY_SERVICE_URL: http://delivery-service:8005
-    depends_on:
-      postgres-order:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    order-service:
+        build:
+            context: ./services
+            dockerfile: main/order-service/Dockerfile
+        container_name: meal-delivery-order-service
+        ports:
+            - "8001:8001"
+        environment:
+            SERVICE_PORT: 8001
+            RABBITMQ_HOST: rabbitmq
+            DATABASE_URL: postgresql://postgres:postgres@postgres-order:5432/order_db
+            RESTAURANT_SERVICE_URL: http://restaurant-service:8002
+            PAYMENT_SERVICE_URL: http://payment-service:8004
+            DELIVERY_SERVICE_URL: http://delivery-service:8005
+        depends_on:
+            postgres-order:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  restaurant-service:
-    build:
-      context: ./services
-      dockerfile: main/restaurant-service/Dockerfile
-    container_name: meal-delivery-restaurant-service
-    ports:
-      - "8002:8002"
-    environment:
-      SERVICE_PORT: 8002
-      RABBITMQ_HOST: rabbitmq
-      DATABASE_URL: postgresql://postgres:postgres@postgres-restaurant:5432/restaurant_db
-    depends_on:
-      postgres-restaurant:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    restaurant-service:
+        build:
+            context: ./services
+            dockerfile: main/restaurant-service/Dockerfile
+        container_name: meal-delivery-restaurant-service
+        ports:
+            - "8002:8002"
+        environment:
+            SERVICE_PORT: 8002
+            RABBITMQ_HOST: rabbitmq
+            DATABASE_URL: postgresql://postgres:postgres@postgres-restaurant:5432/restaurant_db
+        depends_on:
+            postgres-restaurant:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  catalog-service:
-    build:
-      context: ./services
-      dockerfile: main/catalog-service/Dockerfile
-    container_name: meal-delivery-catalog-service
-    ports:
-      - "8003:8003"
-    environment:
-      SERVICE_PORT: 8003
-      RABBITMQ_HOST: rabbitmq
-      ELASTICSEARCH_URL: http://elasticsearch-catalog:9200
-    depends_on:
-      elasticsearch-catalog:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    catalog-service:
+        build:
+            context: ./services
+            dockerfile: main/catalog-service/Dockerfile
+        container_name: meal-delivery-catalog-service
+        ports:
+            - "8003:8003"
+        environment:
+            SERVICE_PORT: 8003
+            RABBITMQ_HOST: rabbitmq
+            ELASTICSEARCH_URL: http://elasticsearch-catalog:9200
+        depends_on:
+            elasticsearch-catalog:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  payment-service:
-    build:
-      context: ./services
-      dockerfile: main/payment-service/Dockerfile
-    container_name: meal-delivery-payment-service
-    ports:
-      - "8004:8004"
-    environment:
-      SERVICE_PORT: 8004
-      RABBITMQ_HOST: rabbitmq
-      DATABASE_URL: postgresql://postgres:postgres@postgres-payment:5432/payment_db
-    depends_on:
-      postgres-payment:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    payment-service:
+        build:
+            context: ./services
+            dockerfile: main/payment-service/Dockerfile
+        container_name: meal-delivery-payment-service
+        ports:
+            - "8004:8004"
+        environment:
+            SERVICE_PORT: 8004
+            RABBITMQ_HOST: rabbitmq
+            DATABASE_URL: postgresql://postgres:postgres@postgres-payment:5432/payment_db
+        depends_on:
+            postgres-payment:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  delivery-service:
-    build:
-      context: ./services
-      dockerfile: main/delivery-service/Dockerfile
-    container_name: meal-delivery-delivery-service
-    ports:
-      - "8005:8005"
-    environment:
-      SERVICE_PORT: 8005
-      RABBITMQ_HOST: rabbitmq
-      MONGODB_URL: mongodb://mongodb-delivery:27017/delivery_db
-    depends_on:
-      mongodb-delivery:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    delivery-service:
+        build:
+            context: ./services
+            dockerfile: main/delivery-service/Dockerfile
+        container_name: meal-delivery-delivery-service
+        ports:
+            - "8005:8005"
+        environment:
+            SERVICE_PORT: 8005
+            RABBITMQ_HOST: rabbitmq
+            MONGODB_URL: mongodb://mongodb-delivery:27017/delivery_db
+        depends_on:
+            mongodb-delivery:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  notification-service:
-    build:
-      context: ./services
-      dockerfile: main/notification-service/Dockerfile
-    container_name: meal-delivery-notification-service
-    ports:
-      - "8006:8006"
-    environment:
-      SERVICE_PORT: 8006
-      RABBITMQ_HOST: rabbitmq
-      DATABASE_URL: postgresql://postgres:postgres@postgres-notification:5432/notification_db
-    depends_on:
-      postgres-notification:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    notification-service:
+        build:
+            context: ./services
+            dockerfile: main/notification-service/Dockerfile
+        container_name: meal-delivery-notification-service
+        ports:
+            - "8006:8006"
+        environment:
+            SERVICE_PORT: 8006
+            RABBITMQ_HOST: rabbitmq
+            DATABASE_URL: postgresql://postgres:postgres@postgres-notification:5432/notification_db
+        depends_on:
+            postgres-notification:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  rating-service:
-    build:
-      context: ./services
-      dockerfile: main/rating-service/Dockerfile
-    container_name: meal-delivery-rating-service
-    ports:
-      - "8007:8007"
-    environment:
-      SERVICE_PORT: 8007
-      RABBITMQ_HOST: rabbitmq
-      MONGODB_URL: mongodb://mongodb-rating:27017/rating_db
-    depends_on:
-      mongodb-rating:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    rating-service:
+        build:
+            context: ./services
+            dockerfile: main/rating-service/Dockerfile
+        container_name: meal-delivery-rating-service
+        ports:
+            - "8007:8007"
+        environment:
+            SERVICE_PORT: 8007
+            RABBITMQ_HOST: rabbitmq
+            MONGODB_URL: mongodb://mongodb-rating:27017/rating_db
+        depends_on:
+            mongodb-rating:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  # ===== Customer Database =====
-  mongodb-customer:
-    image: mongo:7
-    container_name: meal-delivery-mongodb-customer
-    ports:
-      - "27019:27017"
-    environment:
-      MONGO_INITDB_DATABASE: customer_db
-    volumes:
-      - mongodb_customer_data:/data/db
-    healthcheck:
-      test: mongosh --eval "db.adminCommand('ping')" --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    # ===== Customer Database =====
+    mongodb-customer:
+        image: mongo:7
+        container_name: meal-delivery-mongodb-customer
+        ports:
+            - "27019:27017"
+        environment:
+            MONGO_INITDB_DATABASE: customer_db
+        volumes:
+            - mongodb_customer_data:/data/db
+        healthcheck:
+            test: mongosh --eval "db.adminCommand('ping')" --quiet
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  customer-service:
-    build:
-      context: ./services
-      dockerfile: main/customer-service/Dockerfile
-    container_name: meal-delivery-customer-service
-    ports:
-      - "8008:8008"
-    environment:
-      SERVICE_PORT: 8008
-      RABBITMQ_HOST: rabbitmq
-      MONGODB_URL: mongodb://mongodb-customer:27017/customer_db
-      JWT_SECRET: dev-jwt-secret-key
-    depends_on:
-      mongodb-customer:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    customer-service:
+        build:
+            context: ./services
+            dockerfile: main/customer-service/Dockerfile
+        container_name: meal-delivery-customer-service
+        ports:
+            - "8008:8008"
+        environment:
+            SERVICE_PORT: 8008
+            RABBITMQ_HOST: rabbitmq
+            MONGODB_URL: mongodb://mongodb-customer:27017/customer_db
+            JWT_SECRET: dev-jwt-secret-key
+        depends_on:
+            mongodb-customer:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
-  # ===== Deliverer Database =====
-  mongodb-deliverer:
-    image: mongo:7
-    container_name: meal-delivery-mongodb-deliverer
-    ports:
-      - "27020:27017"
-    environment:
-      MONGO_INITDB_DATABASE: deliverer_db
-    volumes:
-      - mongodb_deliverer_data:/data/db
-    healthcheck:
-      test: mongosh --eval "db.adminCommand('ping')" --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - meal-delivery-network
+    # ===== Deliverer Database =====
+    mongodb-deliverer:
+        image: mongo:7
+        container_name: meal-delivery-mongodb-deliverer
+        ports:
+            - "27020:27017"
+        environment:
+            MONGO_INITDB_DATABASE: deliverer_db
+        volumes:
+            - mongodb_deliverer_data:/data/db
+        healthcheck:
+            test: mongosh --eval "db.adminCommand('ping')" --quiet
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - meal-delivery-network
 
-  deliverer-service:
-    build:
-      context: ./services
-      dockerfile: main/deliverer-service/Dockerfile
-    container_name: meal-delivery-deliverer-service
-    ports:
-      - "8009:8009"
-    environment:
-      SERVICE_PORT: 8009
-      RABBITMQ_HOST: rabbitmq
-      MONGODB_URL: mongodb://mongodb-deliverer:27017/deliverer_db
-    depends_on:
-      mongodb-deliverer:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - meal-delivery-network
+    deliverer-service:
+        build:
+            context: ./services
+            dockerfile: main/deliverer-service/Dockerfile
+        container_name: meal-delivery-deliverer-service
+        ports:
+            - "8009:8009"
+        environment:
+            SERVICE_PORT: 8009
+            RABBITMQ_HOST: rabbitmq
+            MONGODB_URL: mongodb://mongodb-deliverer:27017/deliverer_db
+        depends_on:
+            mongodb-deliverer:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - meal-delivery-network
 
 volumes:
-  postgres_order_data:
-  postgres_restaurant_data:
-  postgres_payment_data:
-  postgres_notification_data:
-  mongodb_delivery_data:
-  mongodb_rating_data:
-  elasticsearch_catalog_data:
-  mongodb_customer_data:
-  mongodb_deliverer_data:
+    postgres_order_data:
+    postgres_restaurant_data:
+    postgres_payment_data:
+    postgres_notification_data:
+    mongodb_delivery_data:
+    mongodb_rating_data:
+    elasticsearch_catalog_data:
+    mongodb_customer_data:
+    mongodb_deliverer_data:
 
 networks:
-  meal-delivery-network:
-    name: meal-delivery-network
-    driver: bridge
+    meal-delivery-network:
+        name: meal-delivery-network
+        driver: bridge

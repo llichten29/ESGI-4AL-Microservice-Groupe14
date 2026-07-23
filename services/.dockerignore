@@ -7,3 +7,5 @@ __pycache__/
 .claude/
 .env
 *.md
+tests/
+requirements-dev.txt
