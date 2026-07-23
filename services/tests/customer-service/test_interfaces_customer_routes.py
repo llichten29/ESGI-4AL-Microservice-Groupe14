@@ -121,3 +121,27 @@ class TestCustomerOrderRoutes:
         resp = customer_client.get('/customers/orders', headers=auth_headers)
         assert resp.status_code == 200
         assert resp.get_json()["orders"] == []
+
+
+class TestErrorBranches:
+    def test_login_missing_body(self, customer_client):
+        resp = customer_client.post('/customers/login', json={})
+        assert resp.status_code == 400
+
+    def test_add_address_missing_body(self, customer_client, auth_headers):
+        resp = customer_client.post('/customers/addresses', json={}, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_update_address_missing_body(self, customer_client, auth_headers):
+        resp = customer_client.put('/customers/addresses/addr-1', json={}, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_update_unknown_address_returns_404(self, customer_client, auth_headers):
+        resp = customer_client.put(
+            '/customers/addresses/unknown', json={"label": "Maison"}, headers=auth_headers
+        )
+        assert resp.status_code == 404
+
+    def test_delete_unknown_address_returns_404(self, customer_client, auth_headers):
+        resp = customer_client.delete('/customers/addresses/unknown', headers=auth_headers)
+        assert resp.status_code == 404
