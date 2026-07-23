@@ -27,15 +27,17 @@ class TestProcessPayment:
         assert kwargs["event_data"]["payment_id"] == payment.id
 
     def test_declined_card_fails_without_retry(self, payment_service, mock_broker, fake_sleep, models):
+        data = _order_payment(card_token="card_declined")
         with pytest.raises(models.PaymentDeclined):
-            payment_service.process_payment(_order_payment(card_token="card_declined"))
+            payment_service.process_payment(data)
         fake_sleep.assert_not_called()
         kwargs = mock_broker.publish_event.call_args.kwargs
         assert kwargs["routing_key"] == "payment.failed"
 
     def test_amount_over_limit_is_declined(self, payment_service, models):
+        data = _order_payment(amount=750.0)
         with pytest.raises(models.PaymentDeclined):
-            payment_service.process_payment(_order_payment(amount=750.0))
+            payment_service.process_payment(data)
 
     def test_flaky_gateway_succeeds_after_exponential_retries(self, payment_service, fake_sleep, mock_broker):
         payment = payment_service.process_payment(_order_payment(card_token="card_flaky"))
@@ -56,8 +58,9 @@ class TestProcessPayment:
         assert exc.value.status_code == 422
 
     def test_rejects_non_positive_amount(self, payment_service, models):
+        data = _order_payment(amount=0)
         with pytest.raises(models.PaymentException) as exc:
-            payment_service.process_payment(_order_payment(amount=0))
+            payment_service.process_payment(data)
         assert exc.value.status_code == 422
 
 
@@ -83,8 +86,9 @@ class TestRefund:
             payment_service.refund(payment.id, amount=50.0)
 
     def test_cannot_refund_failed_payment(self, payment_service, models):
+        data = _order_payment(card_token="card_declined")
         with pytest.raises(models.PaymentDeclined):
-            payment_service.process_payment(_order_payment(card_token="card_declined"))
+            payment_service.process_payment(data)
         payment = payment_service.repository.find_by_order_id("order-1")
         with pytest.raises(models.InvalidRefund):
             payment_service.refund(payment.id)
