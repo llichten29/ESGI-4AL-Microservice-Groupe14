@@ -9,6 +9,7 @@ COPY main/api-gateway/requirements.txt main/api-gateway/requirements.txt
 RUN pip install --no-cache-dir -r main/api-gateway/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/api-gateway/ ./main/api-gateway/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

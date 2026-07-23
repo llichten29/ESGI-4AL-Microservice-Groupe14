@@ -6,7 +6,7 @@ import threading
 
 import yaml
 
-from flask import Flask, jsonify, send_from_directory, Response
+from flask import Flask, jsonify, Response
 from flask_cors import CORS
 
 logging.basicConfig(level=logging.INFO)
@@ -23,12 +23,13 @@ from application.gateway_service import GatewayService
 from interfaces.http.routes import routes
 from interfaces.events.handlers import setup_consumers
 from main.shared.message_broker import MessageBroker
+from main.shared.openapi_validator import load_spec, resolve_refs
 
 SWAGGER_UI = """<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>FoodDelivery API - Documentation</title>
+  <title>DashEat API - Documentation</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"/>
 </head>
 <body>
@@ -59,25 +60,59 @@ GATEWAY_HANDLED_PATHS = frozenset({
     '/health', '/docs', '/openapi.yaml', '/orders/{order_id}/details',
 })
 
+GATEWAY_CONTRACT = 'api-gateway.openapi.yaml'
 
-def _load_routing_table(openapi_path: str, app: Flask) -> RoutingTable:
-    if not os.path.exists(openapi_path):
-        logger.warning("OpenAPI spec not found at %s, using empty routing table", openapi_path)
-        return RoutingTable()
 
-    with open(openapi_path, 'r') as f:
-        spec = yaml.safe_load(f)
+def _load_contracts(spec_dir: str) -> list:
+    if not os.path.isdir(spec_dir):
+        logger.warning("OpenAPI contracts directory not found at %s", spec_dir)
+        return []
+    contracts = []
+    for filename in sorted(os.listdir(spec_dir)):
+        if filename.endswith('.openapi.yaml'):
+            contracts.append((filename, load_spec(os.path.join(spec_dir, filename))))
+    logger.info("Loaded %d OpenAPI contract(s) from %s", len(contracts), spec_dir)
+    return contracts
 
+
+def _load_routing_table(contracts: list, app: Flask) -> RoutingTable:
     table = RoutingTable()
-    paths = spec.get('paths', {})
-
-    for path, path_item in paths.items():
-        if path in GATEWAY_HANDLED_PATHS:
+    for filename, spec in contracts:
+        if filename == GATEWAY_CONTRACT:
             continue
-        _add_path_operations(path, path_item, app, table)
-
-    logger.info("Routing table loaded with %d rule(s) from OpenAPI spec", len(table._rules))
+        for path, path_item in spec.get('paths', {}).items():
+            if path in GATEWAY_HANDLED_PATHS:
+                continue
+            _add_path_operations(path, path_item, app, table)
+    logger.info("Routing table loaded with %d rule(s) from OpenAPI contracts", len(table._rules))
     return table
+
+
+def _build_aggregated_spec(contracts: list) -> str:
+    aggregated = {
+        'openapi': '3.0.3',
+        'info': {'title': 'DashEat Platform API', 'version': '1.0.0'},
+        'servers': [{'url': 'http://localhost:8000'}],
+        'tags': [],
+        'paths': {},
+    }
+    for filename, spec in contracts:
+        if filename == GATEWAY_CONTRACT:
+            aggregated['openapi'] = spec.get('openapi', aggregated['openapi'])
+            aggregated['info'] = spec.get('info', aggregated['info'])
+            aggregated['servers'] = spec.get('servers', aggregated['servers'])
+            break
+    for filename, spec in contracts:
+        resolved = resolve_refs(spec, spec, convert_nullable=False)
+        known_tags = {tag.get('name') for tag in aggregated['tags']}
+        for tag in resolved.get('tags', []):
+            if tag.get('name') not in known_tags:
+                aggregated['tags'].append(tag)
+        for path, path_item in resolved.get('paths', {}).items():
+            if filename != GATEWAY_CONTRACT and path in GATEWAY_HANDLED_PATHS:
+                continue
+            aggregated['paths'].setdefault(path, path_item)
+    return yaml.safe_dump(aggregated, sort_keys=False, allow_unicode=True)
 
 
 def _add_path_operations(path: str, path_item: dict, app: Flask, table: RoutingTable):
@@ -117,13 +152,15 @@ def _build_service_urls(app: Flask) -> dict:
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
-    CORS(app)
+    CORS(app, resources={r"/*": {"origins": app.config['CORS_ALLOWED_ORIGINS']}})
 
-    openapi_path = os.environ.get(
-        'OPENAPI_SPEC_PATH',
-        os.path.join(_BASE, 'openapi.yaml'),
+    spec_dir = os.environ.get(
+        'OPENAPI_SPEC_DIR',
+        os.path.join(_BASE, '..', '..', 'ressources', 'endpoints'),
     )
-    app.config['OPENAPI_SPEC_PATH'] = openapi_path
+    app.config['OPENAPI_SPEC_DIR'] = spec_dir
+    contracts = _load_contracts(spec_dir)
+    aggregated_spec = _build_aggregated_spec(contracts)
 
     @app.route('/health', methods=['GET'])
     def health():
@@ -131,15 +168,13 @@ def create_app():
 
     @app.route('/openapi.yaml', methods=['GET'])
     def openapi_spec():
-        spec_dir = os.path.dirname(app.config['OPENAPI_SPEC_PATH'])
-        spec_file = os.path.basename(app.config['OPENAPI_SPEC_PATH'])
-        return send_from_directory(spec_dir, spec_file, mimetype='application/yaml')
+        return Response(aggregated_spec, mimetype='application/yaml')
 
     @app.route('/docs', methods=['GET'])
     def docs():
         return Response(SWAGGER_UI, mimetype='text/html')
 
-    routing_table = _load_routing_table(openapi_path, app)
+    routing_table = _load_routing_table(contracts, app)
     service_client = ServiceClient(base_url='')
     gateway_service = GatewayService(
         routing_table=routing_table,

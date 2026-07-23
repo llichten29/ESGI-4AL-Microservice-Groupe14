@@ -6,6 +6,7 @@ class Config:
     RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
     RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', '5672'))
     SERVICE_PORT = int(os.getenv('SERVICE_PORT', '8000'))
+    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:8000').split(',')
 
     ORDER_SERVICE_URL = os.getenv('ORDER_SERVICE_URL', 'http://order-service:8001')
     RESTAURANT_SERVICE_URL = os.getenv('RESTAURANT_SERVICE_URL', 'http://restaurant-service:8002')
