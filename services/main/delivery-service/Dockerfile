@@ -9,6 +9,7 @@ COPY main/delivery-service/requirements.txt main/delivery-service/requirements.t
 RUN pip install --no-cache-dir -r main/delivery-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/delivery-service/ ./main/delivery-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

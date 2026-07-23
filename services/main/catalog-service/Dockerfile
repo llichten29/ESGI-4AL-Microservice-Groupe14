@@ -9,6 +9,7 @@ COPY main/catalog-service/requirements.txt main/catalog-service/requirements.txt
 RUN pip install --no-cache-dir -r main/catalog-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/catalog-service/ ./main/catalog-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

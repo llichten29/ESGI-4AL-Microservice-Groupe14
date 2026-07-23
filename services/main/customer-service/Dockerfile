@@ -9,6 +9,7 @@ COPY main/customer-service/requirements.txt main/customer-service/requirements.t
 RUN pip install --no-cache-dir -r main/customer-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/customer-service/ ./main/customer-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
