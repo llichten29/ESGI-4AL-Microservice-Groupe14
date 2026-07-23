@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
+
+    from main.shared.openapi_validator import register_openapi_validation
+    register_openapi_validation(app, service_name="rating-service")
     CORS(app, resources={r"/*": {"origins": ["http://localhost:8000"]}})
 
     repo = InMemoryRatingRepository()

@@ -9,6 +9,7 @@ COPY main/notification-service/requirements.txt main/notification-service/requir
 RUN pip install --no-cache-dir -r main/notification-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/notification-service/ ./main/notification-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

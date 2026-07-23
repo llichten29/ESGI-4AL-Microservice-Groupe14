@@ -9,6 +9,7 @@ COPY main/order-service/requirements.txt main/order-service/requirements.txt
 RUN pip install --no-cache-dir -r main/order-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/order-service/ ./main/order-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

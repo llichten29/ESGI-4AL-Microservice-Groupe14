@@ -9,6 +9,7 @@ COPY main/payment-service/requirements.txt main/payment-service/requirements.txt
 RUN pip install --no-cache-dir -r main/payment-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/payment-service/ ./main/payment-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

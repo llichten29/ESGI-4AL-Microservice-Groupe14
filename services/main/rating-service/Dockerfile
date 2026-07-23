@@ -9,6 +9,7 @@ COPY main/rating-service/requirements.txt main/rating-service/requirements.txt
 RUN pip install --no-cache-dir -r main/rating-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/rating-service/ ./main/rating-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

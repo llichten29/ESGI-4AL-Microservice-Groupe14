@@ -9,6 +9,7 @@ COPY main/restaurant-service/requirements.txt main/restaurant-service/requiremen
 RUN pip install --no-cache-dir -r main/restaurant-service/requirements.txt
 
 COPY main/shared/ ./main/shared/
+COPY ressources/endpoints/ ./ressources/endpoints/
 COPY main/restaurant-service/ ./main/restaurant-service/
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
