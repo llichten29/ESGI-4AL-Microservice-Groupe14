@@ -1,0 +1,278 @@
+openapi: 3.0.3
+
+info:
+  title: Order Service API
+  version: 1.0.0
+  description: |
+    Cycle de vie des commandes et orchestration de la SAGA.
+    Ce contrat decrit les routes implementees par order-service ; il est charge
+    au demarrage du service pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8001
+    description: Developpement local
+  - url: http://order-service:8001
+    description: Reseau Docker interne
+
+tags:
+  - name: Orders
+    description: Commandes et orchestration de la SAGA
+
+paths:
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Creation d'une commande (demarre la SAGA)
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderInput' }
+      responses:
+        '201':
+          description: Commande creee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          description: Commande invalide (INVALID_ORDER)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: Restaurant indisponible, circuit breaker ouvert (RESTAURANT_UNAVAILABLE)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /orders/{order_id}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders]
+      summary: Detail d'une commande
+      operationId: getOrder
+      responses:
+        '200':
+          description: Commande
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Orders]
+      summary: Annulation d'une commande
+      description: Autorisee uniquement au statut CREATED ou PAID. Declenche un remboursement si un paiement existe.
+      operationId: cancelOrder
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, default: Cancelled by customer }
+      responses:
+        '200':
+          description: Commande annulee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Annulation refusee (CANCELLATION_NOT_ALLOWED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /customers/{customer_id}/orders:
+    parameters:
+      - $ref: '#/components/parameters/CustomerId'
+    get:
+      tags: [Orders]
+      summary: Commandes d'un client
+      operationId: getCustomerOrders
+      responses:
+        '200':
+          description: Commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+
+  /orders/{order_id}/saga:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders]
+      summary: Etat et historique de la SAGA d'une commande
+      operationId: getOrderSaga
+      responses:
+        '200':
+          description: Etat de la SAGA
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  sagaState: { type: string }
+                  history:
+                    type: array
+                    items: { $ref: '#/components/schemas/SagaStep' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/circuit-breakers:
+    get:
+      tags: [Orders]
+      summary: Etat des circuit breakers du service
+      operationId: getCircuitBreakers
+      responses:
+        '200':
+          description: Etats des circuit breakers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  circuitBreakers:
+                    type: array
+                    items: { type: object }
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    OrderId:
+      { name: order_id, in: path, required: true, schema: { type: string }, description: Identifiant de la commande }
+    CustomerId:
+      { name: customer_id, in: path, required: true, schema: { type: string }, description: Identifiant du client }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: ORDER_NOT_FOUND }
+            message: { type: string, example: Order not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: order-service }
+
+    OrderItemInput:
+      type: object
+      required: [dishId, quantity]
+      properties:
+        dishId: { type: string }
+        name: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number, format: float }
+
+    OrderInput:
+      type: object
+      required: [customerId, restaurantId, items]
+      properties:
+        customerId: { type: string }
+        restaurantId: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrderItemInput' }
+        deliveryAddress: { type: object }
+        payment:
+          type: object
+          description: Details de paiement transmis a la SAGA
+          properties:
+            card_token: { type: string }
+
+    OrderItem:
+      type: object
+      properties:
+        dishId: { type: string }
+        name: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: number, format: float }
+        subtotal: { type: number, format: float }
+
+    SagaStep:
+      type: object
+      properties:
+        state: { type: string }
+        detail: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        customerId: { type: string }
+        restaurantId: { type: string }
+        restaurantName: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        deliveryFee: { type: number, format: float }
+        totalPrice: { type: number, format: float }
+        deliveryAddress: { type: object }
+        status:
+          type: string
+          enum: [CREATED, PAID, CONFIRMED, PREPARING, READY, ASSIGNED, DELIVERING, DELIVERED, CANCELLED]
+        sagaState: { type: string }
+        paymentId: { type: string, nullable: true }
+        deliveryId: { type: string, nullable: true }
+        cancellationReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

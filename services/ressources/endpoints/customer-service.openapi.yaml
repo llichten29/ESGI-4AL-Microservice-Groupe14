@@ -1,0 +1,336 @@
+openapi: 3.0.3
+
+info:
+  title: Customer Service API
+  version: 1.0.0
+  description: |
+    Comptes clients, authentification JWT et adresses. Ce contrat decrit les
+    routes implementees par customer-service ; il est charge au demarrage du
+    service pour valider les requetes entrantes. Les routes marquees d'un
+    cadenas exigent un jeton JWT obtenu via /customers/register ou
+    /customers/login.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8008
+    description: Developpement local
+  - url: http://customer-service:8008
+    description: Reseau Docker interne
+
+tags:
+  - name: Customers
+    description: Comptes clients, authentification et adresses
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /customers/register:
+    post:
+      tags: [Customers]
+      summary: Inscription d'un client
+      operationId: registerCustomer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerRegistration' }
+      responses:
+        '201':
+          description: Client cree, jeton JWT retourne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer: { $ref: '#/components/schemas/Customer' }
+                  token: { type: string, description: Jeton JWT (valable 24 h) }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Adresse email deja utilisee (EMAIL_EXISTS)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /customers/login:
+    post:
+      tags: [Customers]
+      summary: Connexion d'un client
+      operationId: loginCustomer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Authentification reussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer: { $ref: '#/components/schemas/Customer' }
+                  token: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/profile:
+    get:
+      tags: [Customers]
+      summary: Profil du client connecte
+      operationId: getProfile
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Customers]
+      summary: Mise a jour du profil
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Profil mis a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Adresse email deja utilisee (EMAIL_EXISTS)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /customers/addresses:
+    get:
+      tags: [Customers]
+      summary: Liste des adresses du client
+      operationId: listAddresses
+      responses:
+        '200':
+          description: Adresses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items: { $ref: '#/components/schemas/CustomerAddress' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Customers]
+      summary: Ajout d'une adresse
+      operationId: addAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressInput' }
+      responses:
+        '201':
+          description: Adresse creee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerAddress' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/addresses/{address_id}:
+    parameters:
+      - $ref: '#/components/parameters/AddressId'
+    put:
+      tags: [Customers]
+      summary: Mise a jour d'une adresse
+      operationId: updateAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressInput' }
+      responses:
+        '200':
+          description: Adresse mise a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerAddress' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Customers]
+      summary: Suppression d'une adresse
+      operationId: deleteAddress
+      responses:
+        '204':
+          description: Adresse supprimee
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers/orders:
+    get:
+      tags: [Customers]
+      summary: Historique des commandes du client connecte
+      description: References de commandes stockees cote customer-service (vue legere).
+      operationId: listCustomerOrderRefs
+      responses:
+        '200':
+          description: References de commandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items: { $ref: '#/components/schemas/OrderRef' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      security: []
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Jeton JWT obtenu via /customers/login ou /customers/register.
+
+  parameters:
+    AddressId:
+      { name: address_id, in: path, required: true, schema: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Authentification requise ou invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: INVALID_CREDENTIALS }
+            message: { type: string, example: Invalid email or password }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: customer-service }
+
+    CustomerRegistration:
+      type: object
+      required: [email, password]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 6 }
+        phone: { type: string }
+        address: { $ref: '#/components/schemas/AddressInput' }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        addresses:
+          type: array
+          items: { $ref: '#/components/schemas/CustomerAddress' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AddressInput:
+      type: object
+      properties:
+        label: { type: string }
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        is_default: { type: boolean }
+
+    CustomerAddress:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        is_default: { type: boolean }
+
+    OrderRef:
+      type: object
+      properties:
+        order_id: { type: string }
+        status: { type: string }
+        total: { type: number, format: float }
+        date: { type: string }
+        restaurant_name: { type: string }

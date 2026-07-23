@@ -1,0 +1,216 @@
+openapi: 3.0.3
+
+info:
+  title: Deliverer Service API
+  version: 1.0.0
+  description: |
+    Livreurs et gestion de leur disponibilite. Ce contrat decrit les routes
+    implementees par deliverer-service ; il est charge au demarrage du service
+    pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8009
+    description: Developpement local
+  - url: http://deliverer-service:8009
+    description: Reseau Docker interne
+
+tags:
+  - name: Deliverers
+    description: Livreurs et disponibilite
+
+paths:
+
+  /deliverers:
+    get:
+      tags: [Deliverers]
+      summary: Liste des livreurs
+      operationId: listDeliverers
+      responses:
+        '200':
+          description: Livreurs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliverers:
+                    type: array
+                    items: { $ref: '#/components/schemas/Deliverer' }
+    post:
+      tags: [Deliverers]
+      summary: Enregistrement d'un livreur
+      operationId: registerDeliverer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                vehicle: { type: string, default: BIKE, enum: [BIKE, SCOOTER, CAR] }
+                location: { $ref: '#/components/schemas/GeoLocation' }
+      responses:
+        '201':
+          description: Livreur cree
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /deliverers/assign:
+    post:
+      tags: [Deliverers]
+      summary: Affectation du premier livreur disponible
+      operationId: assignAvailableDeliverer
+      responses:
+        '200':
+          description: Livreur affecte (ou null si aucun disponible)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliverer:
+                    oneOf:
+                      - $ref: '#/components/schemas/Deliverer'
+                      - type: 'null'
+
+  /deliverers/{deliverer_id}:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    get:
+      tags: [Deliverers]
+      summary: Detail d'un livreur
+      operationId: getDeliverer
+      responses:
+        '200':
+          description: Livreur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliverers/{deliverer_id}/availability:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    patch:
+      tags: [Deliverers]
+      summary: Mise a jour de la disponibilite
+      operationId: setDelivererAvailability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [AVAILABLE, BUSY, OFFLINE] }
+      responses:
+        '200':
+          description: Disponibilite mise a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliverers/{deliverer_id}/release:
+    parameters:
+      - $ref: '#/components/parameters/DelivererId'
+    post:
+      tags: [Deliverers]
+      summary: Liberation d'un livreur (redevient disponible)
+      operationId: releaseDeliverer
+      responses:
+        '200':
+          description: Livreur libere
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deliverer' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    DelivererId:
+      { name: deliverer_id, in: path, required: true, schema: { type: string }, description: Identifiant du livreur }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: DELIVERER_NOT_FOUND }
+            message: { type: string, example: Deliverer not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: deliverer-service }
+
+    GeoLocation:
+      type: object
+      properties:
+        latitude: { type: number, format: float }
+        longitude: { type: number, format: float }
+
+    Deliverer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        vehicle: { type: string, enum: [BIKE, SCOOTER, CAR] }
+        status: { type: string, enum: [AVAILABLE, BUSY, OFFLINE] }
+        location: { $ref: '#/components/schemas/GeoLocation' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }

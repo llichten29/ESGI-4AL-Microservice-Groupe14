@@ -1,0 +1,233 @@
+openapi: 3.0.3
+
+info:
+  title: Delivery Service API
+  version: 1.0.0
+  description: |
+    Suivi des livraisons : creation d'une course, affectation d'un livreur,
+    suivi de position, confirmation ou echec. Ce contrat decrit les routes
+    implementees par delivery-service ; il est charge au demarrage du service
+    pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8005
+    description: Developpement local
+  - url: http://delivery-service:8005
+    description: Reseau Docker interne
+
+tags:
+  - name: Deliveries
+    description: Suivi des livraisons
+
+paths:
+
+  /deliveries:
+    post:
+      tags: [Deliveries]
+      summary: Creation d'une livraison / affectation d'un livreur
+      operationId: assignDelivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id]
+              properties:
+                order_id: { type: string }
+                customer_id: { type: string }
+                restaurant_id: { type: string }
+      responses:
+        '201':
+          description: Livraison creee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /deliveries/{delivery_id}:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    get:
+      tags: [Deliveries]
+      summary: Detail d'une livraison
+      operationId: getDelivery
+      responses:
+        '200':
+          description: Livraison
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{order_id}/delivery:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Deliveries]
+      summary: Livraison associee a une commande
+      operationId: getDeliveryByOrder
+      responses:
+        '200':
+          description: Livraison
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliveries/{delivery_id}/location:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    patch:
+      tags: [Deliveries]
+      summary: Mise a jour de la position du livreur
+      operationId: updateDeliveryLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location]
+              properties:
+                location: { $ref: '#/components/schemas/GeoLocation' }
+      responses:
+        '200':
+          description: Position mise a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliveries/{delivery_id}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      tags: [Deliveries]
+      summary: Confirmation de la livraison
+      operationId: confirmDelivery
+      responses:
+        '200':
+          description: Livraison confirmee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliveries/{delivery_id}/fail:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      tags: [Deliveries]
+      summary: Echec de la livraison
+      operationId: failDelivery
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Livraison marquee en echec
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Delivery' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    DeliveryId:
+      { name: delivery_id, in: path, required: true, schema: { type: string }, description: Identifiant de la livraison }
+    OrderId:
+      { name: order_id, in: path, required: true, schema: { type: string }, description: Identifiant de la commande }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: DELIVERY_NOT_FOUND }
+            message: { type: string, example: Delivery not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: delivery-service }
+
+    GeoLocation:
+      type: object
+      properties:
+        latitude: { type: number, format: float }
+        longitude: { type: number, format: float }
+
+    Delivery:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        deliverer_id: { type: string, nullable: true }
+        deliverer_name: { type: string, nullable: true }
+        customer_id: { type: string }
+        restaurant_id: { type: string }
+        status:
+          type: string
+          enum: [PENDING, ASSIGNED, PICKED_UP, DELIVERED, FAILED]
+        location: { $ref: '#/components/schemas/GeoLocation' }
+        assigned_at: { type: string, format: date-time, nullable: true }
+        picked_up_at: { type: string, format: date-time, nullable: true }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }

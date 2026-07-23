@@ -1,0 +1,191 @@
+openapi: 3.0.3
+
+info:
+  title: Rating Service API
+  version: 1.0.0
+  description: |
+    Notes et avis sur les restaurants et les livreurs. Ce contrat decrit les
+    routes implementees par rating-service ; il est charge au demarrage du
+    service pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8007
+    description: Developpement local
+  - url: http://rating-service:8007
+    description: Reseau Docker interne
+
+tags:
+  - name: Ratings
+    description: Notes et avis clients/livreurs
+
+paths:
+
+  /ratings:
+    post:
+      tags: [Ratings]
+      summary: Creation d'une note
+      operationId: createRating
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RatingInput' }
+      responses:
+        '201':
+          description: Note creee
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rating' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          description: Note invalide (INVALID_SCORE)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /ratings/{rating_id}:
+    parameters:
+      - { name: rating_id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Ratings]
+      summary: Detail d'une note
+      operationId: getRating
+      responses:
+        '200':
+          description: Note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rating' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ratings/target/{target_type}/{target_id}:
+    parameters:
+      - $ref: '#/components/parameters/TargetType'
+      - $ref: '#/components/parameters/TargetId'
+    get:
+      tags: [Ratings]
+      summary: Notes recues par une cible
+      operationId: getTargetRatings
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ratings:
+                    type: array
+                    items: { $ref: '#/components/schemas/Rating' }
+
+  /ratings/target/{target_type}/{target_id}/summary:
+    parameters:
+      - $ref: '#/components/parameters/TargetType'
+      - $ref: '#/components/parameters/TargetId'
+    get:
+      tags: [Ratings]
+      summary: Synthese des notes d'une cible
+      operationId: getTargetSummary
+      responses:
+        '200':
+          description: Synthese
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RatingSummary' }
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    TargetType:
+      { name: target_type, in: path, required: true, schema: { type: string, enum: [restaurant, deliverer] } }
+    TargetId:
+      { name: target_id, in: path, required: true, schema: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: RATING_NOT_FOUND }
+            message: { type: string, example: Rating not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: rating-service }
+
+    RatingInput:
+      type: object
+      required: [target_id, score]
+      properties:
+        order_id: { type: string }
+        rater_id: { type: string }
+        rater_type: { type: string, default: CUSTOMER }
+        target_id: { type: string }
+        target_type: { type: string, default: RESTAURANT, enum: [RESTAURANT, DELIVERER] }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+
+    Rating:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        rater_id: { type: string }
+        rater_type: { type: string }
+        target_id: { type: string }
+        target_type: { type: string }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        created_at: { type: string, format: date-time }
+
+    RatingSummary:
+      type: object
+      properties:
+        target_id: { type: string }
+        target_type: { type: string }
+        average_score: { type: number, format: float }
+        review_count: { type: integer }

@@ -1,0 +1,121 @@
+openapi: 3.0.3
+
+info:
+  title: Notification Service API
+  version: 1.0.0
+  description: |
+    Notifications emises par la plateforme. Le service est principalement
+    pilote par les evenements RabbitMQ ; l'API HTTP est en lecture seule.
+    Ce contrat decrit les routes implementees par notification-service ;
+    il est charge au demarrage du service pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8006
+    description: Developpement local
+  - url: http://notification-service:8006
+    description: Reseau Docker interne
+
+tags:
+  - name: Notifications
+    description: Notifications emises par la plateforme
+
+paths:
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Liste des notifications
+      operationId: listNotifications
+      parameters:
+        - { name: recipient_id, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items: { $ref: '#/components/schemas/Notification' }
+
+  /notifications/{notification_id}:
+    parameters:
+      - { name: notification_id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Notifications]
+      summary: Detail d'une notification
+      operationId: getNotification
+      responses:
+        '200':
+          description: Notification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  responses:
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: NOTIFICATION_NOT_FOUND }
+            message: { type: string, example: Notification not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: notification-service }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        recipient_id: { type: string }
+        recipient_type: { type: string }
+        type: { type: string }
+        channel: { type: string }
+        message: { type: string }
+        payload: { type: object }
+        created_at: { type: string, format: date-time }

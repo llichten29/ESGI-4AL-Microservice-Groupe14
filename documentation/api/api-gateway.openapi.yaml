@@ -1,0 +1,128 @@
+openapi: 3.0.3
+
+info:
+  title: DashEat Platform API
+  version: 1.0.0
+  description: |
+    Point d'entree unique de DashEat, la plateforme de livraison de repas.
+
+    Le gateway (port 8000) est un reverse-proxy « catch-all » : il recoit
+    toutes les requetes et les transmet, sans reecriture de chemin, au
+    microservice responsable. Sa table de routage est construite au demarrage
+    a partir des contrats OpenAPI par service presents dans
+    services/ressources/endpoints (le tag de chaque operation designe le
+    service cible).
+
+    Ce document ne decrit que les endpoints propres au gateway. La
+    specification complete agregee (gateway + routes proxifiees) est servie
+    par le gateway sur GET /openapi.yaml et navigable sur GET /docs.
+
+    | Service               | Port | Domaine                                        |
+    |-----------------------|------|------------------------------------------------|
+    | order-service         | 8001 | Commandes et orchestration de la SAGA          |
+    | restaurant-service    | 8002 | Restaurants, menus, acceptation des commandes  |
+    | catalog-service       | 8003 | Recherche de restaurants et de plats (lecture) |
+    | payment-service       | 8004 | Paiements et remboursements                    |
+    | delivery-service      | 8005 | Livraisons (suivi d'une course)                |
+    | notification-service  | 8006 | Notifications                                  |
+    | rating-service        | 8007 | Notes et avis                                  |
+    | customer-service      | 8008 | Clients, authentification, adresses            |
+    | deliverer-service     | 8009 | Livreurs et leur disponibilite                 |
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8000
+    description: API Gateway (point d'entree unique)
+
+tags:
+  - name: Gateway
+    description: Endpoints propres au gateway (agregation, sante, documentation)
+
+paths:
+
+  /orders/{order_id}/details:
+    get:
+      tags: [Gateway]
+      summary: Details agreges d'une commande
+      description: >
+        Route d'agregation propre au gateway : recupere la commande aupres de
+        order-service, puis enrichit la reponse avec le nom et la localisation
+        du restaurant (restaurant-service).
+      operationId: getOrderDetails
+      parameters:
+        - { name: order_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Commande enrichie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurant_name: { type: string }
+                  restaurant_location: { type: string, nullable: true }
+        '404':
+          description: Commande introuvable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /docs:
+    get:
+      tags: [Gateway]
+      summary: Documentation Swagger UI
+      operationId: getDocs
+      responses:
+        '200':
+          description: Interface Swagger UI
+          content:
+            text/html:
+              schema: { type: string }
+
+  /health:
+    get:
+      tags: [Gateway]
+      summary: Etat de sante du gateway
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le gateway repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      tags: [Gateway]
+      summary: Specification agregee de la plateforme
+      description: >
+        Specification OpenAPI construite au demarrage par fusion des contrats
+        par service (routes proxifiees) et des endpoints propres au gateway.
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Specification OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: NOT_FOUND }
+            message: { type: string, example: Ressource introuvable }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: api-gateway }

@@ -1,0 +1,216 @@
+openapi: 3.0.3
+
+info:
+  title: Payment Service API
+  version: 1.0.0
+  description: |
+    Paiements et remboursements. Simule une passerelle de paiement externe :
+    jetons de carte speciaux card_declined (refus) et card_flaky (2 echecs
+    transitoires puis succes), montant plafonne a 500 EUR. Ce contrat decrit
+    les routes implementees par payment-service ; il est charge au demarrage
+    du service pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8004
+    description: Developpement local
+  - url: http://payment-service:8004
+    description: Reseau Docker interne
+
+tags:
+  - name: Payments
+    description: Paiements et remboursements
+
+paths:
+
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Traitement d'un paiement
+      operationId: processPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentInput' }
+      responses:
+        '201':
+          description: Paiement traite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Paiement refuse par la passerelle (PAYMENT_DECLINED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Passerelle de paiement indisponible (GATEWAY_ERROR)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /payments/{payment_id}:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    get:
+      tags: [Payments]
+      summary: Detail d'un paiement
+      operationId: getPayment
+      responses:
+        '200':
+          description: Paiement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{order_id}/payment:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Payments]
+      summary: Paiement associe a une commande
+      operationId: getPaymentByOrder
+      responses:
+        '200':
+          description: Paiement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/{payment_id}/refund:
+    parameters:
+      - $ref: '#/components/parameters/PaymentId'
+    post:
+      tags: [Payments]
+      summary: Remboursement (total ou partiel)
+      operationId: refundPayment
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: { type: number, format: float, description: Montant a rembourser (0 = total restant) }
+                reason: { type: string }
+      responses:
+        '201':
+          description: Remboursement effectue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400':
+          description: Remboursement invalide (INVALID_REFUND)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    PaymentId:
+      { name: payment_id, in: path, required: true, schema: { type: string }, description: Identifiant du paiement }
+    OrderId:
+      { name: order_id, in: path, required: true, schema: { type: string }, description: Identifiant de la commande }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: PAYMENT_DECLINED }
+            message: { type: string, example: Payment declined by provider }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: payment-service }
+
+    PaymentInput:
+      type: object
+      required: [order_id, amount]
+      properties:
+        order_id: { type: string }
+        customer_id: { type: string }
+        amount: { type: number, format: float, description: Montant en EUR (max 500) }
+        currency: { type: string, default: EUR }
+        payment_method: { type: string, default: CARD }
+        card_token: { type: string, description: "Jetons de test : card_declined, card_flaky" }
+
+    Refund:
+      type: object
+      properties:
+        id: { type: string }
+        amount: { type: number, format: float }
+        reason: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        customer_id: { type: string }
+        amount: { type: number, format: float }
+        currency: { type: string }
+        payment_method: { type: string }
+        status:
+          type: string
+          enum: [PROCESSING, COMPLETED, FAILED, REFUNDED]
+        transaction_id: { type: string, nullable: true }
+        failure_reason: { type: string, nullable: true }
+        refunds:
+          type: array
+          items: { $ref: '#/components/schemas/Refund' }
+        refunded_amount: { type: number, format: float }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }

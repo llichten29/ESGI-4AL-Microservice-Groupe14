@@ -1,0 +1,521 @@
+openapi: 3.0.3
+
+info:
+  title: Restaurant Service API
+  version: 1.0.0
+  description: |
+    Gestion des restaurants, de leurs menus et des decisions sur les commandes.
+    Ce contrat decrit les routes implementees par restaurant-service ; il est
+    charge au demarrage du service pour valider les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8002
+    description: Developpement local
+  - url: http://restaurant-service:8002
+    description: Reseau Docker interne
+
+tags:
+  - name: Restaurants
+    description: Restaurants, menus et commandes en preparation
+
+paths:
+
+  /restaurants:
+    get:
+      tags: [Restaurants]
+      summary: Liste de tous les restaurants
+      operationId: listRestaurants
+      responses:
+        '200':
+          description: Restaurants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items: { $ref: '#/components/schemas/Restaurant' }
+    post:
+      tags: [Restaurants]
+      summary: Creation d'un restaurant
+      operationId: createRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantInput' }
+      responses:
+        '201':
+          description: Restaurant cree
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /restaurants/{restaurant_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Restaurants]
+      summary: Detail d'un restaurant
+      operationId: getRestaurant
+      responses:
+        '200':
+          description: Restaurant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise a jour d'un restaurant
+      operationId: updateRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantInput' }
+      responses:
+        '200':
+          description: Restaurant mis a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Restaurant' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    get:
+      tags: [Restaurants]
+      summary: Liste des menus d'un restaurant
+      operationId: listMenus
+      responses:
+        '200':
+          description: Menus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  menus:
+                    type: array
+                    items: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Restaurants]
+      summary: Ajout d'un menu
+      operationId: createMenu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuInput' }
+      responses:
+        '201':
+          description: Menu cree
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus/{menu_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+    get:
+      tags: [Restaurants]
+      summary: Detail d'un menu
+      operationId: getMenu
+      responses:
+        '200':
+          description: Menu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise a jour d'un menu
+      operationId: updateMenu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuInput' }
+      responses:
+        '200':
+          description: Menu mis a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Menu' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Restaurants]
+      summary: Suppression d'un menu
+      operationId: deleteMenu
+      responses:
+        '204':
+          description: Menu supprime
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus/{menu_id}/items:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+    post:
+      tags: [Restaurants]
+      summary: Ajout d'un article au menu
+      operationId: createMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuItemInput' }
+      responses:
+        '201':
+          description: Article cree
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/menus/{menu_id}/items/{item_id}:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/MenuId'
+      - $ref: '#/components/parameters/ItemId'
+    get:
+      tags: [Restaurants]
+      summary: Detail d'un article
+      operationId: getMenuItem
+      responses:
+        '200':
+          description: Article
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Restaurants]
+      summary: Mise a jour d'un article
+      operationId: updateMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MenuItemInput' }
+      responses:
+        '200':
+          description: Article mis a jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Restaurants]
+      summary: Suppression d'un article
+      operationId: deleteMenuItem
+      responses:
+        '204':
+          description: Article supprime
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/validate:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+    post:
+      tags: [Restaurants]
+      summary: Validation d'une commande par le restaurant
+      description: >
+        Verifie la disponibilite des articles et l'ouverture du restaurant
+        (appele par order-service durant la SAGA). En cas d'echec la reponse
+        garde la forme {isValid, reason, code} propre a cette route.
+      operationId: validateOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dishId: { type: string }
+                      quantity: { type: integer }
+                requestedDeliveryTime: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Resultat de validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isValid: { type: boolean }
+                  reason: { type: string, nullable: true }
+                  code: { type: string, nullable: true }
+
+  /restaurants/{restaurant_id}/orders/{order_id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Restaurants]
+      summary: Acceptation d'une commande par le restaurant
+      operationId: acceptOrder
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estimatedPrepTime: { type: integer, description: Temps de preparation estime (minutes) }
+      responses:
+        '200':
+          description: Commande acceptee
+          content:
+            application/json:
+              schema: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/orders/{order_id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Restaurants]
+      summary: Refus d'une commande par le restaurant
+      operationId: rejectOrder
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, default: OTHER }
+      responses:
+        '200':
+          description: Commande refusee
+          content:
+            application/json:
+              schema: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurant_id}/orders/{order_id}/status:
+    parameters:
+      - $ref: '#/components/parameters/RestaurantId'
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Restaurants]
+      summary: Mise a jour du statut de preparation
+      operationId: updateOrderStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, example: PREPARING }
+      responses:
+        '200':
+          description: Statut mis a jour
+          content:
+            application/json:
+              schema: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  parameters:
+    RestaurantId:
+      { name: restaurant_id, in: path, required: true, schema: { type: string }, description: Identifiant du restaurant }
+    MenuId:
+      { name: menu_id, in: path, required: true, schema: { type: string } }
+    ItemId:
+      { name: item_id, in: path, required: true, schema: { type: string } }
+    OrderId:
+      { name: order_id, in: path, required: true, schema: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Requete invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: RESTAURANT_NOT_FOUND }
+            message: { type: string, example: Restaurant not found }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: restaurant-service }
+
+    GeoPoint:
+      type: object
+      properties:
+        latitude: { type: number, format: float }
+        longitude: { type: number, format: float }
+
+    RestaurantAddress:
+      type: object
+      properties:
+        street: { type: string }
+        city: { type: string }
+        postal_code: { type: string }
+        coordinates: { $ref: '#/components/schemas/GeoPoint' }
+
+    OpeningHours:
+      type: object
+      properties:
+        day: { type: string, example: monday }
+        open_time: { type: string, example: "09:00" }
+        close_time: { type: string, example: "22:00" }
+
+    MenuOption:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        price: { type: number, format: float }
+        is_default: { type: boolean }
+
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        is_available: { type: boolean }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/MenuOption' }
+
+    MenuItemInput:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        is_available: { type: boolean, default: true }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/MenuOption' }
+
+    Menu:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        is_active: { type: boolean }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MenuItem' }
+
+    MenuInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        is_active: { type: boolean, default: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MenuItemInput' }
+
+    Restaurant:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { $ref: '#/components/schemas/RestaurantAddress' }
+        phone: { type: string }
+        cuisine_type: { type: string }
+        opening_hours:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningHours' }
+        is_open: { type: boolean }
+        status: { type: string, example: ACTIVE }
+        rating: { type: number, format: float }
+        menus:
+          type: array
+          items: { $ref: '#/components/schemas/Menu' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RestaurantInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        cuisine_type: { type: string, default: OTHER }
+        status: { type: string, default: ACTIVE }
+        address: { $ref: '#/components/schemas/RestaurantAddress' }
+        opening_hours:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningHours' }

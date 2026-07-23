@@ -1,0 +1,135 @@
+openapi: 3.0.3
+
+info:
+  title: Catalog Service API
+  version: 1.0.0
+  description: |
+    Recherche de restaurants et de plats (vue de lecture alimentee par les
+    evenements des autres services). Ce contrat decrit les routes implementees
+    par catalog-service ; il est charge au demarrage du service pour valider
+    les requetes entrantes.
+  contact:
+    name: Groupe 14 — ESGI 4AL
+
+servers:
+  - url: http://localhost:8003
+    description: Developpement local
+  - url: http://catalog-service:8003
+    description: Reseau Docker interne
+
+tags:
+  - name: Catalog
+    description: Recherche de restaurants et de plats
+
+paths:
+
+  /restaurants/search:
+    get:
+      tags: [Catalog]
+      summary: Recherche de restaurants
+      operationId: searchRestaurants
+      parameters:
+        - { name: query, in: query, schema: { type: string }, description: Terme de recherche (nom) }
+        - { name: cuisineType, in: query, schema: { type: string }, description: Type de cuisine }
+        - { name: isOpen, in: query, schema: { type: boolean }, description: Filtrer sur les restaurants ouverts }
+        - { name: minRating, in: query, schema: { type: number, format: float, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: Resultats de recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  restaurants:
+                    type: array
+                    items: { $ref: '#/components/schemas/CatalogEntry' }
+
+  /dishes/search:
+    get:
+      tags: [Catalog]
+      summary: Recherche de plats
+      operationId: searchDishes
+      parameters:
+        - { name: query, in: query, schema: { type: string } }
+        - { name: restaurantId, in: query, schema: { type: string } }
+        - { name: maxPrice, in: query, schema: { type: number, format: float } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: Plats trouves
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dishes:
+                    type: array
+                    items: { $ref: '#/components/schemas/CatalogDish' }
+
+  /health:
+    get:
+      summary: Etat de sante du service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Le service repond
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /openapi.yaml:
+    get:
+      summary: Contrat OpenAPI du service
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: Contrat OpenAPI au format YAML
+          content:
+            application/yaml:
+              schema: { type: string }
+
+components:
+
+  schemas:
+
+    Error:
+      type: object
+      description: Format d'erreur standard de la plateforme.
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: NOT_FOUND }
+            message: { type: string, example: Ressource introuvable }
+
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: healthy }
+        service: { type: string, example: catalog-service }
+
+    CatalogDish:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        price: { type: number, format: float }
+
+    CatalogEntry:
+      type: object
+      properties:
+        restaurantId: { type: string }
+        name: { type: string }
+        cuisineType: { type: string }
+        address: { type: string }
+        isOpen: { type: boolean }
+        rating: { type: number, format: float }
+        reviewCount: { type: integer }
+        dishes:
+          type: array
+          items: { $ref: '#/components/schemas/CatalogDish' }
+        indexedAt: { type: string, format: date-time }
