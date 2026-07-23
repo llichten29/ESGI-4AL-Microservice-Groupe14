@@ -2,14 +2,14 @@
 
 ## 7.1 Points de défaillance identifiés
 
-| Point de défaillance | Impact sans protection | Protection retenue |
-|----------------------|------------------------|--------------------|
-| **Service Paiement indisponible** (ou PSP lent) | L'appel synchrone Commande→Paiement bloque des threads, les commandes s'empilent, la panne remonte en cascade jusqu'au client | **Timeout + Retry + Circuit Breaker + Fallback** (détaillé ci-dessous) |
-| PSP externe en panne | Idem, vu du service Paiement | Timeout + circuit breaker dans Paiement vers le PSP |
-| Service Restaurant ne répond pas au catalogue | Recherche indisponible | Découplage : le Catalogue est un read model autonome + **fallback cache Redis** (résultats servis même périmés, marqués `stale`) |
-| RabbitMQ indisponible | Événements perdus, SAGA gelée | Transactional Outbox (rien n'est perdu, publication différée) + files durables ; la SAGA reprend au redémarrage |
-| Restaurant/Livreur ne répond jamais (délai humain) | Commande bloquée indéfiniment | **Timeouts métier** de la SAGA (5 min acceptation, 10 min affectation) → compensation automatique |
-| Crash d'un service en cours de SAGA | État incohérent | État persistant `saga_state` + messages idempotents : reprise là où on s'était arrêté |
+| Point de défaillance                               | Impact sans protection                                                                                                        | Protection retenue                                                                                                               |
+|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| **Service Paiement indisponible** (ou PSP lent)    | L'appel synchrone Commande→Paiement bloque des threads, les commandes s'empilent, la panne remonte en cascade jusqu'au client | **Timeout + Retry + Circuit Breaker + Fallback** (détaillé ci-dessous)                                                           |
+| PSP externe en panne                               | Idem, vu du service Paiement                                                                                                  | Timeout + circuit breaker dans Paiement vers le PSP                                                                              |
+| Service Restaurant ne répond pas au catalogue      | Recherche indisponible                                                                                                        | Découplage : le Catalogue est un read model autonome + **fallback cache Redis** (résultats servis même périmés, marqués `stale`) |
+| RabbitMQ indisponible                              | Événements perdus, SAGA gelée                                                                                                 | Transactional Outbox (rien n'est perdu, publication différée) + files durables ; la SAGA reprend au redémarrage                  |
+| Restaurant/Livreur ne répond jamais (délai humain) | Commande bloquée indéfiniment                                                                                                 | **Timeouts métier** de la SAGA (5 min acceptation, 10 min affectation) → compensation automatique                                |
+| Crash d'un service en cours de SAGA                | État incohérent                                                                                                               | État persistant `saga_state` + messages idempotents : reprise là où on s'était arrêté                                            |
 
 ## 7.2 Pattern principal : Circuit Breaker sur Commande → Paiement
 

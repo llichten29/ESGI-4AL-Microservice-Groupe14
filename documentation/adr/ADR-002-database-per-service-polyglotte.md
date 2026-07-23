@@ -1,7 +1,8 @@
 # ADR-002 — Une base de données par service, persistance polyglotte
 
-**Statut** : Accepté — 2026-07-14
+**Statut** : Accepté — 2026-06-14
 **Décideurs** : Groupe 14
+**Précisé par** : [ADR-007](ADR-007-choix-moteurs-persistance.md) (affectation des moteurs par service actualisée)
 
 ## Contexte
 

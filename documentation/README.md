@@ -1,18 +1,18 @@
-# Documentation d'architecture — Plateforme de Livraison de Repas
+# Documentation d'architecture — DashEat
 
 > Projet ESGI 4AL — Architecture Microservices — Groupe 14
 
-Cette documentation décrit la conception d'une architecture microservices pour une plateforme de livraison de repas de type Uber Eats / Deliveroo, conformément à l'énoncé du projet (`Enonce projet.pdf`).
+Cette documentation décrit la conception de **DashEat**, une architecture microservices pour une plateforme de livraison de repas de type Uber Eats / Deliveroo, conformément à l'énoncé du projet (`Enonce projet.pdf`).
 
 ## Sommaire
 
 | # | Document | Contenu |
 |---|----------|---------|
-| 1 | [Architecture générale](01-architecture-generale.md) | Description générale de l'architecture proposée, vue d'ensemble, stack technique |
+| 1 | [Architecture générale](01-architecture-generale.md) | Description générale de l'architecture proposée, vue d'ensemble, Clean Architecture des services, stack technique |
 | 2 | [Analyse du domaine](02-analyse-domaine.md) | Analyse DDD, Bounded Contexts et justification du découpage en microservices |
 | 3 | [Microservices](03-microservices.md) | Description de chaque microservice : responsabilités et modèle de données principal |
 | 4 | [Communication inter-services](04-communication.md) | Patterns de communication synchrone (REST) et asynchrone (RabbitMQ), versioning |
-| 5 | [Contrats d'API](05-contrats-api.md) | Contrats OpenAPI 3 des services clés (Commande, Paiement, Restaurant) |
+| 5 | [Contrats d'API](05-contrats-api.md) | Contrats OpenAPI 3 des dix services et validation des requêtes à l'exécution |
 | 6 | [Cohérence & SAGA](06-coherence-saga.md) | Stratégie de gestion de la cohérence et SAGA orchestrée du passage de commande |
 | 7 | [Résilience](07-resilience.md) | Points de défaillance et patterns Circuit Breaker, Retry, Timeout, Fallback |
 
@@ -26,6 +26,7 @@ Cette documentation décrit la conception d'une architecture microservices pour 
 | [ADR-004](adr/ADR-004-saga-orchestration.md) | SAGA orchestrée pour le processus de passage de commande |
 | [ADR-005](adr/ADR-005-api-gateway-kong.md) | API Gateway Kong comme point d'entrée unique |
 | [ADR-006](adr/ADR-006-resilience-circuit-breaker.md) | Circuit Breaker (+ Retry, Timeout, Fallback) sur les appels synchrones critiques |
+| [ADR-007](adr/ADR-007-choix-moteurs-persistance.md) | Choix des moteurs de persistance par service (PostgreSQL, MongoDB, Elasticsearch, Redis) |
 
 ## Diagrammes (draw.io)
 
@@ -41,10 +42,15 @@ Tous les diagrammes sont réalisés avec **draw.io** : les sources `.drawio` (é
 
 ## Contrats d'API (OpenAPI 3)
 
-- [`api/commande-service.openapi.yaml`](api/commande-service.openapi.yaml)
-- [`api/paiement-service.openapi.yaml`](api/paiement-service.openapi.yaml)
+La source autoritaire des contrats est `services/ressources/endpoints/` (chargée par les services à l'exécution) ; le dossier [`api/`](api/) en est le miroir documentaire.
+
+- [`api/api-gateway.openapi.yaml`](api/api-gateway.openapi.yaml)
+- [`api/order-service.openapi.yaml`](api/order-service.openapi.yaml)
 - [`api/restaurant-service.openapi.yaml`](api/restaurant-service.openapi.yaml)
-
-## Présentation
-
-Le support de soutenance se trouve dans [`../presentation/soutenance-groupe14.pptx`](../presentation/soutenance-groupe14.pptx).
+- [`api/catalog-service.openapi.yaml`](api/catalog-service.openapi.yaml)
+- [`api/payment-service.openapi.yaml`](api/payment-service.openapi.yaml)
+- [`api/delivery-service.openapi.yaml`](api/delivery-service.openapi.yaml)
+- [`api/notification-service.openapi.yaml`](api/notification-service.openapi.yaml)
+- [`api/rating-service.openapi.yaml`](api/rating-service.openapi.yaml)
+- [`api/customer-service.openapi.yaml`](api/customer-service.openapi.yaml)
+- [`api/deliverer-service.openapi.yaml`](api/deliverer-service.openapi.yaml)

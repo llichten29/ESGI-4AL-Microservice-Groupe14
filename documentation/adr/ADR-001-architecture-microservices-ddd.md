@@ -1,6 +1,6 @@
 # ADR-001 — Architecture microservices découpée selon les Bounded Contexts (DDD)
 
-**Statut** : Accepté — 2026-07-14
+**Statut** : Accepté — 2026-06-14
 **Décideurs** : Groupe 14
 
 ## Contexte

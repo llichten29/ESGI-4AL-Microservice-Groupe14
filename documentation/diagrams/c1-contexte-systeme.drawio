@@ -1,0 +1,79 @@
+<mxfile host="65bd71144e">
+    <diagram id="c1-contexte" name="C1 - Contexte systeme">
+        <mxGraphModel dx="1386" dy="779" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="&lt;b&gt;Diagramme de contexte système (C4 — Niveau 1)&lt;/b&gt; — DashEat" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="820" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend" value="&lt;b&gt;&lt;u&gt;Légende&lt;/u&gt;&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=top;fontSize=12;fontColor=#333333;spacing=8;strokeColor=#D0D0D0;fillColor=#FAFAFA;rounded=1;container=1;collapsible=0;recursiveResize=0;" parent="1" vertex="1">
+                    <mxGeometry x="14" y="548" width="211" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3399FF;strokeColor=#052E56;fontColor=#FFFFFF;fontSize=13;arcSize=12;" parent="legend" vertex="1">
+                    <mxGeometry x="16" y="46" width="64" height="31" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="Utilisateur" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="legend" vertex="1">
+                    <mxGeometry x="93" y="46" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;arcSize=12;" parent="legend" vertex="1">
+                    <mxGeometry x="16" y="101" width="64" height="31" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="Système étudiés" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="legend" vertex="1">
+                    <mxGeometry x="93" y="101" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#8C8C8C,#8C8C8C);strokeColor=#052E56;fontColor=#FFFFFF;fontSize=13;arcSize=12;" parent="legend" vertex="1">
+                    <mxGeometry x="16" y="154" width="64" height="31" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Système externes" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="legend" vertex="1">
+                    <mxGeometry x="93" y="154" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;rounded=0;" parent="legend" edge="1">
+                    <mxGeometry x="-0.1803" y="17" relative="1" as="geometry">
+                        <mxPoint x="16" y="225" as="sourcePoint"/>
+                        <mxPoint x="77" y="225" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="Flux de données" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="legend" vertex="1">
+                    <mxGeometry x="93" y="211" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="pClient" value="Client&#xa;Parcourt les restaurants, commande des repas, paie en ligne et suit sa livraison" style="rounded=1;whiteSpace=wrap;fillColor=#3399FF;strokeColor=#052E56;fontColor=#000000;fontSize=13;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="110" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="pResto" value="Restaurateur&#xa;Gère son profil et ses menus, accepte ou refuse les commandes" style="rounded=1;whiteSpace=wrap;fillColor=#3399FF;strokeColor=#052E56;fontColor=#000000;fontSize=13;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="110" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="pLivreur" value="Livreur&#xa;Déclare sa disponibilité, accepte les propositions et effectue les livraisons" style="rounded=1;whiteSpace=wrap;fillColor=#3399FF;strokeColor=#052E56;fontColor=#000000;fontSize=13;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="14" y="348" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="system" value="&lt;b&gt;DashEat&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Permet de commander des repas auprès de restaurants partenaires, de payer en ligne et de faire livrer par des livreurs indépendants&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;arcSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="432" y="320" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="psp" value="&lt;b&gt;PSP — Stripe&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Prestataire de paiement sécurisé : autorisation, capture, remboursement&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C8C8C;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=13;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="930" y="345" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="notif" value="&lt;b&gt;Fournisseurs Email / SMS / Push&lt;/b&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Acheminement des notifications aux utilisateurs&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8C8C8C;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=13;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="930" y="540" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="eClient" value="Parcourt, commande, paie, suit&lt;br&gt;[HTTPS / application mobile &amp;amp; web]" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.25;entryY=0;rounded=0;" parent="1" source="pClient" target="system" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eResto" value="Gère menus et commandes&lt;br&gt;[HTTPS / portail restaurateur]" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=0.75;entryY=0;rounded=0;" parent="1" source="pResto" target="system" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eLivreur" value="Accepte et effectue les livraisons&lt;br&gt;[HTTPS / application livreur]" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;rounded=0;" parent="1" source="pLivreur" target="system" edge="1">
+                    <mxGeometry x="-0.1803" y="17" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ePsp" value="Autorise, capture,&lt;br&gt;rembourse [HTTPS]" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;rounded=0;" parent="1" source="system" target="psp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eNotif" value="Envoie les notifications&lt;br&gt;[SMTP / API]" style="endArrow=classic;html=1;fontSize=11;strokeColor=#555555;fontColor=#333333;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;entryX=0;entryY=0.5;rounded=0;" parent="1" source="system" target="notif" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

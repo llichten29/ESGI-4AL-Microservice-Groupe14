@@ -1,6 +1,6 @@
 # ADR-005 — API Gateway Kong comme point d'entrée unique
 
-**Statut** : Accepté — 2026-07-14
+**Statut** : Accepté — 2026-06-14
 **Décideurs** : Groupe 14
 
 ## Contexte

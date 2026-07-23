@@ -1,6 +1,6 @@
 # ADR-004 — SAGA orchestrée pour le passage de commande
 
-**Statut** : Accepté — 2026-07-14
+**Statut** : Accepté — 2026-06-14
 **Décideurs** : Groupe 14
 
 ## Contexte

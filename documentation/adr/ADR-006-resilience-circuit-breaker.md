@@ -1,6 +1,6 @@
 # ADR-006 — Circuit Breaker (+ Retry, Timeout, Fallback) sur les appels synchrones critiques
 
-**Statut** : Accepté — 2026-07-14
+**Statut** : Accepté — 2026-06-14
 **Décideurs** : Groupe 14
 
 ## Contexte

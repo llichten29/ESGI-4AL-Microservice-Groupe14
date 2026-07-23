@@ -38,14 +38,14 @@ Mécanique retenue : étapes **synchrones** vers Paiement (résultat immédiat r
 
 ### Étapes (transactions locales)
 
-| # | Étape | Service | Transaction locale | Compensation associée |
-|---|-------|---------|--------------------|------------------------|
-| 1 | Création commande | Commande | `orders` : état RECUE | Marquer ANNULEE |
-| 2 | Autorisation paiement | Paiement | Autorisation PSP (fonds réservés, non débités) | Annulation d'autorisation / remboursement |
-| 3 | Acceptation restaurant | Restaurant | Ticket accepté, préparation lancée | Événement d'annulation du ticket |
-| 4 | Affectation livreur | Livraison | `deliveries` créée, livreur réservé | Libérer le livreur, annuler la course |
-| 5 | Livraison confirmée | Livraison | Livraison LIVREE | — (fin de parcours) |
-| 6 | Capture du paiement | Paiement | Débit effectif | (remboursement si litige — hors SAGA) |
+| # | Étape                  | Service    | Transaction locale                             | Compensation associée                     |
+|---|------------------------|------------|------------------------------------------------|-------------------------------------------|
+| 1 | Création commande      | Commande   | `orders` : état RECUE                          | Marquer ANNULEE                           |
+| 2 | Autorisation paiement  | Paiement   | Autorisation PSP (fonds réservés, non débités) | Annulation d'autorisation / remboursement |
+| 3 | Acceptation restaurant | Restaurant | Ticket accepté, préparation lancée             | Événement d'annulation du ticket          |
+| 4 | Affectation livreur    | Livraison  | `deliveries` créée, livreur réservé            | Libérer le livreur, annuler la course     |
+| 5 | Livraison confirmée    | Livraison  | Livraison LIVREE                               | — (fin de parcours)                       |
+| 6 | Capture du paiement    | Paiement   | Débit effectif                                 | (remboursement si litige — hors SAGA)     |
 
 **Point de non-retour (pivot)** : l'acceptation par le restaurant. Avant le pivot, toute défaillance annule la commande sans impact client (l'autorisation est simplement libérée). Après le pivot (plats en préparation), les compensations deviennent des décisions métier : si aucun livreur n'est trouvé, la plateforme rembourse le client (elle assume le coût du repas préparé).
 
